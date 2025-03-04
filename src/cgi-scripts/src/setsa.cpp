@@ -22,7 +22,7 @@ int main() {
     std::cout << "    <title>Set Time Zone</title>\n";
     std::cout << "</head>\n";
     std::cout << "<body>\n";
-    std::cout << "    <p>Setting timezone to South Africa...</p>\n";
+    std::cout << "    <p>LOADING...</p>\n";
     std::cout << "</body>\n";
     std::cout << "</html>\n";
     
