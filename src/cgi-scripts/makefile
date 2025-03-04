@@ -45,9 +45,11 @@ untar:
 untars:
 	sudo tar -xzvf cgi_prac.tar.gz -C /usr/lib/cgi-bin/prac/
 
+untarf:
+	sudo tar -xzf cgi_prac.tar.gz --strip-components=1 -C /usr/lib/cgi-bin/prac/ src
+
 md5:
 	md5sum *.tar.gz
-	# ea48bd945b39d7fa1baf5dedf6608144  cgi_prac.tar.gz
 
 cov:
 	make clean
