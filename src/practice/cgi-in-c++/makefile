@@ -6,15 +6,15 @@ main:
 	g++ -g main.cpp -std=c++11 -pedantic -o main.cgi
 	chmod +x main.cgi
 
-clean:
-	rm -f *.o *.gcov *.gcda *.gcno *.info *.gz *.html *.cgi test *.css output.txt coverage.txt
-	reset
-	clear
-
 run:
 	sudo mv main.cgi /usr/lib/cgi-bin/
 	sudo chmod +x /usr/lib/cgi-bin/main.cgi
 	sudo chown www-data:www-data /usr/lib/cgi-bin/main.cgi
+
+clean:
+	rm -f *.o *.gcov *.gcda *.gcno *.info *.gz *.html *.cgi test *.css output.txt coverage.txt
+	reset
+	clear
 
 tar:
 	tar -cvz main.cpp -f Code.tar.gz
