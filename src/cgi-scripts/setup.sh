@@ -5,35 +5,43 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+# Install dependencies
 apt-get update
 apt-get install -y apache2 build-essential
 
 a2enmod cgi
-
 systemctl restart apache2
 
-g++ -o showtime.cgi src/showtime.cpp
-g++ -o setsa.cgi src/setsa.cpp
-g++ -o setgh.cgi src/setgh.cpp
-
+# Create necessary directories
 mkdir -p /var/www/data
-mkdir -p /usr/lib/cgi-bin
+mkdir -p /usr/lib/cgi-bin/prac
 
-cp showtime.cgi /usr/lib/cgi-bin/
-cp setsa.cgi /usr/lib/cgi-bin/
-cp setgh.cgi /usr/lib/cgi-bin/
+# Compile C++ CGI scripts
+sudo g++ -Wall -g -std=c++11 -pedantic /usr/lib/cgi-bin/prac/showtime.cpp -o /usr/lib/cgi-bin/showtime.cgi
+sudo g++ -Wall -g -std=c++11 -pedantic /usr/lib/cgi-bin/prac/setsa.cpp -o /usr/lib/cgi-bin/setsa.cgi
+sudo g++ -Wall -g -std=c++11 -pedantic /usr/lib/cgi-bin/prac/setgh.cpp -o /usr/lib/cgi-bin/setgh.cgi
 
-chmod 755 /usr/lib/cgi-bin/showtime.cgi
-chmod 755 /usr/lib/cgi-bin/setsa.cgi
-chmod 755 /usr/lib/cgi-bin/setgh.cgi
+# Set permissions
+sudo chmod +x /usr/lib/cgi-bin/showtime.cgi
+sudo chmod +x /usr/lib/cgi-bin/setsa.cgi
+sudo chmod +x /usr/lib/cgi-bin/setgh.cgi
 
-echo "2" > /var/www/data/timezone.txt
-echo "South Africa" >> /var/www/data/timezone.txt
-echo "Pretoria" >> /var/www/data/timezone.txt
+sudo chown www-data:www-data /usr/lib/cgi-bin/showtime.cgi
+sudo chown www-data:www-data /usr/lib/cgi-bin/setsa.cgi
+sudo chown www-data:www-data /usr/lib/cgi-bin/setgh.cgi
 
-chmod 666 /var/www/data/timezone.txt
+# Set up timezone data
+sudo echo "2" > /var/www/data/timezone.txt
+sudo echo "South Africa" >> /var/www/data/timezone.txt
+sudo echo "Pretoria" >> /var/www/data/timezone.txt
 
-cp www/index.html /var/www/html/
+sudo chmod 666 /var/www/data/timezone.txt
+sudo chown www-data:www-data /var/www/data/timezone.txt
+
+# Copy index.html to web root
+sudo cp www/index.html /var/www/html/index.html
+sudo chmod 644 /var/www/html/index.html
+sudo chown www-data:www-data /var/www/html/index.html
 
 IP_ADDRESS=$(hostname -I | awk '{print $1}')
 
