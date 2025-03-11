@@ -30,3 +30,7 @@ material/
 /material
 ./material
 ./material/
+
+# Generated Files
+
+main
