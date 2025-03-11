@@ -14,7 +14,7 @@ run:
 	valgrind --leak-check=full ./main
 
 tar:
-	tar -cvz *.* -f Code.tar.gz
+	tar -cvz *.* makefile -f telnet.tar.gz
 
 untar:
 	tar -zxvf *.tar.gz
