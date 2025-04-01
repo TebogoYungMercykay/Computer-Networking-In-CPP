@@ -1,0 +1,22 @@
+body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+h1 { color: #333; }
+.contact { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
+.contact img { max-width: 100px; max-height: 100px; margin-right: 15px; float: left; }
+.contact-info { margin-left: 115px; }
+.actions { margin-top: 20px; }
+.actions a { margin-right: 10px; text-decoration: none; }
+.search-form { margin-bottom: 20px; }
+.empty-message { color: #666; font-style: italic; }
+.nav { margin-bottom: 20px; }
+.nav a { margin-right: 15px; text-decoration: none; }
+form { margin-top: 20px; }
+label { display: block; margin-bottom: 5px; font-weight: bold; }
+input[type="text"] { width: 300px; padding: 8px; margin-bottom: 15px; }
+input[type="submit"], button { padding: 10px 15px; background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+.error { color: red; margin-bottom: 15px; }
+.file-info { color: #666; margin-top: 5px; font-size: 0.9em; }
+.current-photo { margin-bottom: 15px; }
+.current-photo img { max-width: 100px; max-height: 100px; }
+.delete-btn { background-color: #f44336; }
+.cancel-btn { background-color: #ccc; color: black; text-decoration: none; padding: 10px 15px; margin-left: 10px; }
+.confirmation form { display: inline; }
