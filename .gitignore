@@ -26,5 +26,11 @@ replay_pid*
 # Random Local Folder(s)
 /material
 /material/
+material/
+/material
 ./material
 ./material/
+
+# Generated Files
+
+main
