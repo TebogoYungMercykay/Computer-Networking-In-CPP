@@ -331,20 +331,22 @@ std::vector<Contact> LDAPClient::parseLDAPSearchResponseMultiple(const std::vect
     while (parser.getPosition() < parser.getSize()) {
         unsigned char tag = parser.readTag();
         size_t len = parser.readLength();
+        size_t entryEnd = parser.getPosition() + len;
         
         // Check if this is a search result entry
         if (tag == LDAP_SEARCH_RESULT_ENTRY) {
-            size_t entryEnd = parser.getPosition() + len;
             Contact contact;
             
             // Read the object name (DN)
             contact.dn = parser.readOctetString();
             
-            // Read attributes (SEQUENCE OF SEQUENCE)
-            unsigned char attrsTag = parser.readTag();
-            parser.readLength();
+            // Read attributes sequence tag and length
+            parser.readTag();
+            size_t attrsLen = parser.readLength();
+            size_t attrsEnd = parser.getPosition() + attrsLen;
             
-            while (parser.getPosition() < entryEnd) {
+            // Process all attributes
+            while (parser.getPosition() < attrsEnd) {
                 // Each attribute is a SEQUENCE
                 parser.readTag();
                 parser.readLength();
@@ -361,23 +363,26 @@ std::vector<Contact> LDAPClient::parseLDAPSearchResponseMultiple(const std::vect
                 while (parser.getPosition() < valuesEnd) {
                     std::string attrValue = parser.readOctetString();
                     values.push_back(attrValue);
-                    
-                    // Store common attributes in easy-to-access fields
-                    if (attrType == "cn" && contact.name.empty()) {
-                        contact.name = attrValue;
-                    } else if (attrType == "telephoneNumber" && contact.phoneNumber.empty()) {
-                        contact.phoneNumber = attrValue;
-                    }
                 }
                 
                 // Store all attributes in the map
                 contact.attributes[attrType] = values;
+                
+                // Store common attributes in easy-to-access fields
+                if (attrType == "cn" && !values.empty()) {
+                    contact.name = values[0];
+                } else if (attrType == "telephoneNumber" && !values.empty()) {
+                    contact.phoneNumber = values[0];
+                }
             }
             
             contacts.push_back(contact);
         } else if (tag == LDAP_SEARCH_RESULT_DONE) {
             // Read the result code
-            parser.readInteger();
+            int resultCode = parser.readInteger();
+            if (resultCode != 0) {
+                std::cerr << "LDAP search failed with result code: " << resultCode << std::endl;
+            }
             break;
         } else {
             parser.readValue(len);
@@ -442,9 +447,13 @@ std::string LDAPClient::search(const char* baseDN, const char* filter) {
 
 std::vector<Contact> LDAPClient::searchAll(const char* baseDN, const char* filter) {
     std::vector<std::string> attributes = {"cn", "telephoneNumber"};
-    std::vector<unsigned char> searchRequest = createLDAPSearchRequest(messageID++, baseDN, filter, attributes);
     
-    // Send the search request
+    // If no filter provided, use objectClass=* to get all entries
+    const char* searchFilter = filter ? filter : "(objectClass=*)";
+    
+    std::vector<unsigned char> searchRequest = createLDAPSearchRequest(messageID++, baseDN, searchFilter, attributes, LDAP_SCOPE_SUBTREE);
+    
+    // Search request
     if (send(sock, searchRequest.data(), searchRequest.size(), 0) < 0) {
         std::cerr << "Send failed" << std::endl;
         return {};
@@ -460,7 +469,6 @@ std::vector<Contact> LDAPClient::searchAll(const char* baseDN, const char* filte
     
     response.resize(recvSize);
     
-    // Parse the response to extract all contacts
     return parseLDAPSearchResponseMultiple(response);
 }
 
