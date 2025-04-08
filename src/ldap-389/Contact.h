@@ -11,6 +11,8 @@ struct Contact {
     std::string name;
     std::string phoneNumber;
     std::map<std::string, std::vector<std::string>> attributes;
+    
+    Contact() : dn(""), name(""), phoneNumber("") {}
 };
 
 #endif // CONTACT_H
