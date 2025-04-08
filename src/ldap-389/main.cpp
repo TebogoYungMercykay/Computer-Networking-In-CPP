@@ -39,9 +39,9 @@ void showWelcomeScreen() {
 void showMainMenu() {
     std::cout << ansiColor(33) << "MAIN MENU:" << ansiReset() << std::endl;
     std::cout << "1. Search for a contact" << std::endl;
-    std::cout << "2. List all contacts" << std::endl;
-    std::cout << "3. Advanced search" << std::endl;
-    std::cout << "4. Exit" << std::endl;
+    std::cout << "2. Advanced search" << std::endl;
+    std::cout << "3. Exit" << std::endl;
+    // std::cout << "3. List all contacts" << std::endl;
     std::cout << std::endl;
     std::cout << "Type 'h' for help, 'c' to clear screen" << std::endl;
     std::cout << ansiColor(32) << "Enter your choice: " << ansiReset();
@@ -224,11 +224,11 @@ int main() {
         if (choice == "1") {
             searchContact(client);
         } else if (choice == "2") {
-            listAllContacts(client);
-        } else if (choice == "3") {
             advancedSearch(client);
-        } else if (choice == "4") {
+        } else if (choice == "3") {
             running = false;
+        // } else if (choice == "4") {
+        //     listAllContacts(client);
         } else if (choice == "h") {
             showHelp();
         } else if (choice == "c") {
