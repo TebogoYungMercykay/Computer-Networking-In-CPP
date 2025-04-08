@@ -39,7 +39,8 @@ std::vector<unsigned char> BERParser::readValue(size_t length) {
 
 int BERParser::readInteger() {
     unsigned char tag = readTag();
-    if (tag != 0x02) return 0;  // Not an INTEGER
+    // Not an INTEGER
+    if (tag != 0x02) return 0;
     
     size_t len = readLength();
     std::vector<unsigned char> value = readValue(len);
@@ -54,7 +55,8 @@ int BERParser::readInteger() {
 
 std::string BERParser::readOctetString() {
     unsigned char tag = readTag();
-    if (tag != 0x04) return "";  // Not an OCTET STRING
+    // Not an OCTET STRING
+    if (tag != 0x04) return "";
     
     size_t len = readLength();
     std::vector<unsigned char> value = readValue(len);
