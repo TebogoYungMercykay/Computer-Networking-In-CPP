@@ -1,8 +1,10 @@
 #include "LDAPClient.h"
+#include "Contact.h"
 #include <iostream>
 #include <string>
 #include <vector>
 #include <limits>
+#include <iomanip>
 
 // ANSI color codes and terminal control sequences
 std::string ansiColor(int color) {
@@ -57,7 +59,7 @@ void showHelp() {
     std::cout << std::endl;
     std::cout << "1. Search for a contact - Search by name to find contact information" << std::endl;
     std::cout << "2. List all contacts - Display all contacts in the directory" << std::endl;
-    std::cout << "3. Advanced search - Search using specific attributes" << std::endl;
+    std::cout << "3. Advanced search - Search using specific attributes (name, phone number)" << std::endl;
     std::cout << "4. Exit - Close the application" << std::endl;
     std::cout << std::endl;
     std::cout << "Additional commands:" << std::endl;
@@ -79,6 +81,33 @@ void displaySearchResult(const std::string& name, const std::string& phoneNumber
         std::cout << "No contact found with name: " << ansiColor(36) << name << ansiReset() << std::endl;
         std::cout << std::endl;
     }
+}
+
+void displayContacts(const std::vector<Contact>& contacts) {
+    if (contacts.empty()) {
+        std::cout << ansiColor(31) << "✗ " << ansiReset();
+        std::cout << "No contacts found." << std::endl;
+        std::cout << std::endl;
+        return;
+    }
+
+    std::cout << ansiColor(32) << "✓ " << ansiReset();
+    std::cout << "Found " << contacts.size() << " contact(s):" << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "┌" << std::string(30, '─') << "┬" << std::string(20, '─') << "┐" << std::endl;
+    std::cout << "│ " << ansiColor(36) << std::left << std::setw(28) << "Name" 
+              << ansiReset() << "│ " << ansiColor(36) << std::left << std::setw(18) 
+              << "Phone Number" << ansiReset() << "│" << std::endl;
+    std::cout << "├" << std::string(30, '─') << "┼" << std::string(20, '─') << "┤" << std::endl;
+
+    for (const auto& contact : contacts) {
+        std::cout << "│ " << std::left << std::setw(28) << contact.name 
+                  << "│ " << std::left << std::setw(18) << contact.phoneNumber << "│" << std::endl;
+    }
+
+    std::cout << "└" << std::string(30, '─') << "┴" << std::string(20, '─') << "┘" << std::endl;
+    std::cout << std::endl;
 }
 
 void searchContact(LDAPClient& client) {
@@ -117,11 +146,11 @@ void listAllContacts(LDAPClient& client) {
     
     std::cout << ansiColor(33) << "Retrieving all contacts..." << ansiReset() << std::endl;
     
-    // In a real application, we would modify the LDAP client to fetch all entries
-    // For now, we'll simulate with a message
-    std::cout << "This functionality requires extended LDAP query support." << std::endl;
-    std::cout << "Fetch all contacts would use a wildcard search filter like '(cn=*)'" << std::endl;
-    std::cout << std::endl;
+    // Retrieve all contacts using the searchAll method
+    std::vector<Contact> contacts = client.searchAll("ou=Friends,dc=friends,dc=local");
+    
+    // Display the contacts
+    displayContacts(contacts);
     
     std::cout << ansiColor(33) << "Press Enter to continue..." << ansiReset();
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -134,14 +163,29 @@ void advancedSearch(LDAPClient& client) {
     std::cout << "╚════════════════════════════════════════════════════════════════════════╝" << ansiReset() << std::endl;
     std::cout << std::endl;
     
-    std::cout << "Available search attributes:" << std::endl;
-    std::cout << "1. Name (cn)" << std::endl;
-    std::cout << "2. Phone Number (telephoneNumber)" << std::endl;
-    std::cout << std::endl;
+    std::string nameFilter, phoneFilter;
     
-    std::cout << "This functionality requires extended LDAP query support with custom filters." << std::endl;
-    std::cout << "For example: '(|(cn=*John*)(telephoneNumber=555*)'" << std::endl;
-    std::cout << std::endl;
+    std::cout << "Enter name to search for (leave empty to ignore): ";
+    std::getline(std::cin, nameFilter);
+    
+    std::cout << "Enter phone number to search for (leave empty to ignore): ";
+    std::getline(std::cin, phoneFilter);
+    
+    if (nameFilter.empty() && phoneFilter.empty()) {
+        std::cout << ansiColor(33) << "At least one search criteria is needed." << ansiReset() << std::endl;
+        std::cout << "Press Enter to continue...";
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        return;
+    }
+    
+    std::cout << ansiColor(33) << "Searching for contacts..." << ansiReset() << std::endl;
+    std::cout << "Please wait..." << std::endl;
+    
+    // Perform advanced search using name and/or phone filters
+    std::vector<Contact> results = client.advancedSearch("ou=Friends,dc=friends,dc=local", nameFilter, phoneFilter);
+    
+    // Display the results
+    displayContacts(results);
     
     std::cout << ansiColor(33) << "Press Enter to continue..." << ansiReset();
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
