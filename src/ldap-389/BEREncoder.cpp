@@ -33,8 +33,7 @@ std::vector<unsigned char> BEREncoder::encodeInteger(int value) {
     // Type: INTEGER (0x02)
     result.push_back(0x02);
     
-    // For simplicity, we'll handle only small positive integers
-    result.push_back(0x01);  // Length: 1 byte
+    result.push_back(0x01);
     result.push_back(static_cast<unsigned char>(value & 0xFF));
     
     return result;
@@ -69,7 +68,7 @@ std::vector<unsigned char> BEREncoder::encodeSequence(const std::vector<unsigned
     std::vector<unsigned char> lengthBytes = encodeLength(data.size());
     result.insert(result.end(), lengthBytes.begin(), lengthBytes.end());
     
-    // Value (the data itself)
+    // Value
     result.insert(result.end(), data.begin(), data.end());
     
     return result;
