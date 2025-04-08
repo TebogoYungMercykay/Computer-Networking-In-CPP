@@ -94,19 +94,8 @@ void displayContacts(const std::vector<Contact>& contacts) {
     std::cout << "All Contacts:" << std::endl;
     
     for (const auto& contact : contacts) {
-        // Debug information to see what data we actually have
         std::cout << "  * " << ansiColor(36) << (contact.name.empty() ? "[No Name]" : contact.name) << ansiReset() << ": " 
                   << ansiColor(33) << (contact.phoneNumber.empty() ? "[No Phone]" : contact.phoneNumber) << ansiReset() << std::endl;
-                  
-        // Print all attributes for debugging
-        for (const auto& attr : contact.attributes) {
-            std::cout << "    - " << attr.first << ": ";
-            for (const auto& val : attr.second) {
-                std::cout << val << " ";
-            }
-            std::cout << std::endl;
-        }
-        
     }
     
     std::cout << std::endl;
