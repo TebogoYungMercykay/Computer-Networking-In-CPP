@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 #include <limits>
-#include <iomanip>
 
 // ANSI color codes and terminal control sequences
 std::string ansiColor(int color) {
@@ -23,12 +22,12 @@ void showWelcomeScreen() {
     std::cout << clearScreen();
     std::cout << ansiColor(36) << "╔════════════════════════════════════════════════════════════════════════╗" << std::endl;
     std::cout << "║                                                                        ║" << std::endl;
-    std::cout << "║           ██╗     ██████╗  █████╗ ██████╗      ██████╗███╗   ███╗     ║" << std::endl;
-    std::cout << "║           ██║     ██╔══██╗██╔══██╗██╔══██╗    ██╔════╝████╗ ████║     ║" << std::endl;
-    std::cout << "║           ██║     ██║  ██║███████║██████╔╝    ██║     ██╔████╔██║     ║" << std::endl;
-    std::cout << "║           ██║     ██║  ██║██╔══██║██╔═══╝     ██║     ██║╚██╔╝██║     ║" << std::endl;
-    std::cout << "║           ███████╗██████╔╝██║  ██║██║         ╚██████╗██║ ╚═╝ ██║     ║" << std::endl;
-    std::cout << "║           ╚══════╝╚═════╝ ╚═╝  ╚═╝╚═╝          ╚═════╝╚═╝     ╚═╝     ║" << std::endl;
+    std::cout << "║           ██╗     ██████╗  █████╗ ██████╗      ██████╗███╗   ███╗      ║" << std::endl;
+    std::cout << "║           ██║     ██╔══██╗██╔══██╗██╔══██╗    ██╔════╝████╗ ████║      ║" << std::endl;
+    std::cout << "║           ██║     ██║  ██║███████║██████╔╝    ██║     ██╔████╔██║      ║" << std::endl;
+    std::cout << "║           ██║     ██║  ██║██╔══██║██╔═══╝     ██║     ██║╚██╔╝██║      ║" << std::endl;
+    std::cout << "║           ███████╗██████╔╝██║  ██║██║         ╚██████╗██║ ╚═╝ ██║      ║" << std::endl;
+    std::cout << "║           ╚══════╝╚═════╝ ╚═╝  ╚═╝╚═╝          ╚═════╝╚═╝     ╚═╝      ║" << std::endl;
     std::cout << "║                                                                        ║" << std::endl;
     std::cout << "║            Welcome to the LDAP Contact Management System!              ║" << std::endl;
     std::cout << "║            Connect, manage, and retrieve your contacts easily.         ║" << std::endl;
@@ -51,7 +50,7 @@ void showMainMenu() {
 void showHelp() {
     std::cout << clearScreen();
     std::cout << ansiColor(36) << "╔════════════════════════════════════════════════════════════════════════╗" << std::endl;
-    std::cout << "║                              HELP MENU                                ║" << std::endl;
+    std::cout << "║                              HELP MENU                                 ║" << std::endl;
     std::cout << "╚════════════════════════════════════════════════════════════════════════╝" << ansiReset() << std::endl;
     std::cout << std::endl;
     std::cout << "This application uses LDAP protocol to query a directory of contacts." << std::endl;
@@ -92,28 +91,33 @@ void displayContacts(const std::vector<Contact>& contacts) {
     }
 
     std::cout << ansiColor(32) << "✓ " << ansiReset();
-    std::cout << "Found " << contacts.size() << " contact(s):" << std::endl;
-    std::cout << std::endl;
-
-    std::cout << "┌" << std::string(30, '─') << "┬" << std::string(20, '─') << "┐" << std::endl;
-    std::cout << "│ " << ansiColor(36) << std::left << std::setw(28) << "Name" 
-              << ansiReset() << "│ " << ansiColor(36) << std::left << std::setw(18) 
-              << "Phone Number" << ansiReset() << "│" << std::endl;
-    std::cout << "├" << std::string(30, '─') << "┼" << std::string(20, '─') << "┤" << std::endl;
-
+    std::cout << "All Contacts:" << std::endl;
+    
     for (const auto& contact : contacts) {
-        std::cout << "│ " << std::left << std::setw(28) << contact.name 
-                  << "│ " << std::left << std::setw(18) << contact.phoneNumber << "│" << std::endl;
+        // Debug information to see what data we actually have
+        std::cout << "  * " << ansiColor(36) << (contact.name.empty() ? "[No Name]" : contact.name) << ansiReset() << ": " 
+                  << ansiColor(33) << (contact.phoneNumber.empty() ? "[No Phone]" : contact.phoneNumber) << ansiReset() << std::endl;
+                  
+        // Print all attributes for debugging
+        for (const auto& attr : contact.attributes) {
+            std::cout << "    - " << attr.first << ": ";
+            for (const auto& val : attr.second) {
+                std::cout << val << " ";
+            }
+            std::cout << std::endl;
+        }
+        
     }
-
-    std::cout << "└" << std::string(30, '─') << "┴" << std::string(20, '─') << "┘" << std::endl;
+    
+    std::cout << std::endl;
+    std::cout << "Total: " << contacts.size() << " contact(s)" << std::endl;
     std::cout << std::endl;
 }
 
 void searchContact(LDAPClient& client) {
     std::cout << clearScreen();
     std::cout << ansiColor(36) << "╔════════════════════════════════════════════════════════════════════════╗" << std::endl;
-    std::cout << "║                           CONTACT SEARCH                              ║" << std::endl;
+    std::cout << "║                           CONTACT SEARCH                               ║" << std::endl;
     std::cout << "╚════════════════════════════════════════════════════════════════════════╝" << ansiReset() << std::endl;
     std::cout << std::endl;
     
@@ -140,7 +144,7 @@ void searchContact(LDAPClient& client) {
 void listAllContacts(LDAPClient& client) {
     std::cout << clearScreen();
     std::cout << ansiColor(36) << "╔════════════════════════════════════════════════════════════════════════╗" << std::endl;
-    std::cout << "║                           ALL CONTACTS                                ║" << std::endl;
+    std::cout << "║                           ALL CONTACTS                                 ║" << std::endl;
     std::cout << "╚════════════════════════════════════════════════════════════════════════╝" << ansiReset() << std::endl;
     std::cout << std::endl;
     
@@ -159,7 +163,7 @@ void listAllContacts(LDAPClient& client) {
 void advancedSearch(LDAPClient& client) {
     std::cout << clearScreen();
     std::cout << ansiColor(36) << "╔════════════════════════════════════════════════════════════════════════╗" << std::endl;
-    std::cout << "║                         ADVANCED SEARCH                               ║" << std::endl;
+    std::cout << "║                         ADVANCED SEARCH                                ║" << std::endl;
     std::cout << "╚════════════════════════════════════════════════════════════════════════╝" << ansiReset() << std::endl;
     std::cout << std::endl;
     
@@ -183,6 +187,16 @@ void advancedSearch(LDAPClient& client) {
     
     // Perform advanced search using name and/or phone filters
     std::vector<Contact> results = client.advancedSearch("ou=Friends,dc=friends,dc=local", nameFilter, phoneFilter);
+    
+    // Display the search criteria used
+    std::cout << "Search criteria:" << std::endl;
+    if (!nameFilter.empty()) {
+        std::cout << "  Name contains: " << ansiColor(36) << nameFilter << ansiReset() << std::endl;
+    }
+    if (!phoneFilter.empty()) {
+        std::cout << "  Phone contains: " << ansiColor(36) << phoneFilter << ansiReset() << std::endl;
+    }
+    std::cout << std::endl;
     
     // Display the results
     displayContacts(results);
