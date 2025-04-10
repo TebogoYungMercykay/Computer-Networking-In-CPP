@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Contact - Phone Directory</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"],
+        input[type="tel"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .nav {
+            margin: 20px 0;
+        }
+        .nav a {
+            margin-right: 15px;
+            text-decoration: none;
+            color: #0066cc;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+    <script src="/static/js/app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Add New Contact</h1>
+        
+        <div class="nav">
+            <a href="/">Home</a>
+            <a href="/add">Add Contact</a>
+            <a href="/search">Search</a>
+        </div>
+        
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+        
+        <form id="add-contact-form" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="phone">Phone Number:</label>
+                <input type="tel" id="phone" name="phone" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="photo">Photo (optional):</label>
+                <input type="file" id="photo" name="photo" accept="image/*">
+            </div>
+            
+            <button type="submit">Add Contact</button>
+        </form>
+    </div>
+</body>
+</html>
