@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Phone Directory</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .contact {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .contact img {
+            float: left;
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            margin-right: 15px;
+        }
+        .contact-info {
+            float: left;
+        }
+        .actions {
+            margin-top: 10px;
+        }
+        .actions a {
+            margin-right: 10px;
+            text-decoration: none;
+            color: #0066cc;
+        }
+        .actions a:hover {
+            text-decoration: underline;
+        }
+        .empty-message {
+            color: #666;
+            font-style: italic;
+        }
+        .nav {
+            margin: 20px 0;
+        }
+        .nav a {
+            margin-right: 15px;
+            text-decoration: none;
+            color: #0066cc;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+    <script src="/static/js/app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Phone Directory</h1>
+        
+        <div class="nav">
+            <a href="/">Home</a>
+            <a href="/add">Add Contact</a>
+            <a href="/search">Search</a>
+        </div>
+        
+        <h2>Contacts</h2>
+        
+        <div id="contacts-container">
+            <!-- Contacts will be loaded via JavaScript -->
+            <p>Loading contacts...</p>
+        </div>
+    </div>
+</body>
+</html>

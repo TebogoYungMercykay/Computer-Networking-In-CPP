@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Error - Phone Directory</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #dc3545; }
+        .error-container { margin: 20px 0; padding: 20px; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px; }
+        .nav { margin-bottom: 20px; }
+        .nav a { margin-right: 15px; }
+    </style>
+</head>
+<body>
+    <h1>Error: {{ error }}</h1>
+    
+    <div class="nav">
+        <a href="/">Home</a>
+        <a href="/add">Add Contact</a>
+        <a href="/search">Search</a>
+    </div>
+    
+    <div class="error-container">
+        <p>{{ message }}</p>
+    </div>
+</body>
+</html>

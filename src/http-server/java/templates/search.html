@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Search Contacts - Phone Directory</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .contact {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .contact img {
+            float: left;
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            margin-right: 15px;
+        }
+        .contact-info {
+            float: left;
+        }
+        .actions {
+            margin-top: 10px;
+        }
+        .actions a {
+            margin-right: 10px;
+            text-decoration: none;
+            color: #0066cc;
+        }
+        .actions a:hover {
+            text-decoration: underline;
+        }
+        .empty-message {
+            color: #666;
+            font-style: italic;
+        }
+        .nav {
+            margin: 20px 0;
+        }
+        .nav a {
+            margin-right: 15px;
+            text-decoration: none;
+            color: #0066cc;
+        }
+        .search-form {
+            margin: 20px 0;
+        }
+        .search-form input[type="text"] {
+            padding: 8px;
+            width: 60%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .search-form button {
+            padding: 8px 16px;
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+    <script src="/static/js/app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Search Contacts</h1>
+        
+        <div class="nav">
+            <a href="/">Home</a>
+            <a href="/add">Add Contact</a>
+            <a href="/search">Search</a>
+        </div>
+        
+        <form id="search-form" class="search-form">
+            <input type="text" id="search-input" name="q" placeholder="Search by name or phone number" value="{{ query }}">
+            <button type="submit">Search</button>
+        </form>
+        
+        <h2>Results</h2>
+        
+        <div id="contacts-container">
+            <!-- Search results will be loaded via JavaScript -->
+            <p>Enter a search term above to find contacts</p>
+        </div>
+    </div>
+</body>
+</html>
