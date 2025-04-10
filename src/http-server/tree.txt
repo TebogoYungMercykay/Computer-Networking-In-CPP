@@ -1,0 +1,36 @@
+.
+├── cpp
+│   ├── CMakeLists.txt
+│   ├── images
+│   ├── main.cpp
+│   ├── makefile
+│   ├── openssl_base64.cpp
+│   ├── openssl_base64.h
+│   ├── phone_directory.json
+│   └── static
+│       └── style.css
+├── java
+│   ├── bin
+│   │   └── PhoneDirectoryServer.class
+│   ├── json-20231013.jar
+│   ├── makefile
+│   ├── manifest.txt
+│   ├── phone_directory.json
+│   ├── PhoneDirectoryServer.jar
+│   ├── PhoneDirectoryServer.java
+│   ├── static
+│   │   ├── images
+│   │   │   └── default.png
+│   │   └── js
+│   │       └── app.js
+│   ├── templates
+│   │   ├── add.html
+│   │   ├── delete.html
+│   │   ├── edit.html
+│   │   ├── error.html
+│   │   ├── index.html
+│   │   └── search.html
+│   └── uploads
+└── tree.txt
+
+10 directories, 23 files
