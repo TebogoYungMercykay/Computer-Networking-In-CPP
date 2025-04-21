@@ -10,14 +10,9 @@ private:
     SSL* ssl;
     SSL_CTX* ctx;
     bool use_ssl;
-    
-    // Send data through socket or SSL
+
     bool send_data(const std::string& data);
-    
-    // Receive data from socket or SSL
     std::string receive_data();
-    
-    // Wait for response and check response code
     bool check_response(int expected_code);
 
 public:
