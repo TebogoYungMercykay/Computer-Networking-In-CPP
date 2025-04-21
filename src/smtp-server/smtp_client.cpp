@@ -1,3 +1,5 @@
+// ---- SMTP Client Class Implementation ----
+
 #include "smtp_client.h"
 #include "utils.h"
 #include <iostream>
@@ -11,7 +13,8 @@
 #include <openssl/err.h>
 #include <ctime>
 
-// Private methods
+// ---- Private methods ----
+
 bool SMTPClient::send_data(const std::string& data) {
     if (use_ssl) {
         return SSL_write(ssl, data.c_str(), data.length()) > 0;
@@ -50,10 +53,10 @@ bool SMTPClient::check_response(int expected_code) {
     }
 }
 
-// Public methods
+// ---- Public methods ----
+
 SMTPClient::SMTPClient(bool use_ssl) : socket_fd(-1), ssl(nullptr), ctx(nullptr), use_ssl(use_ssl) {
     if (use_ssl) {
-        // Initialize OpenSSL
         SSL_library_init();
         OpenSSL_add_all_algorithms();
         SSL_load_error_strings();
@@ -96,7 +99,7 @@ bool SMTPClient::connect_to_server(const std::string& host, int port) {
         return false;
     }
     
-    // Check initial response from server
+    // Initial Response from Server
     if (!check_response(220)) {
         std::cerr << ansiColor(31) << "Error: Server did not respond with ready status" << ansiReset() << std::endl;
         close(socket_fd);
@@ -104,12 +107,12 @@ bool SMTPClient::connect_to_server(const std::string& host, int port) {
         return false;
     }
     
-    // For SSL/TLS connections
+    // SSL/TLS connections
     if (use_ssl) {
         ssl = SSL_new(ctx);
         SSL_set_fd(ssl, socket_fd);
         
-        // Send EHLO before starting TLS
+        // EHLO before starting TLS
         std::string ehlo_cmd = "EHLO " + host + "\r\n";
         send_data(ehlo_cmd);
         if (!check_response(250)) {
@@ -130,14 +133,14 @@ bool SMTPClient::connect_to_server(const std::string& host, int port) {
             return false;
         }
         
-        // Send EHLO again after TLS established
+        // EHLO again after TLS Established
         send_data(ehlo_cmd);
         if (!check_response(250)) {
             std::cerr << ansiColor(31) << "Error: EHLO command failed after TLS" << ansiReset() << std::endl;
             return false;
         }
     } else {
-        // Send HELO for non-SSL connections
+        // HELO for non-SSL connections
         std::string helo_cmd = "HELO " + host + "\r\n";
         send_data(helo_cmd);
         return check_response(250);
@@ -154,14 +157,14 @@ bool SMTPClient::authenticate(const std::string& username, const std::string& pa
         return false;
     }
     
-    // Send base64 encoded username
+    // Base64 encoded Username
     send_data(base64_encode(username) + "\r\n");
     if (!check_response(334)) {
         std::cerr << ansiColor(31) << "Error: Username authentication failed" << ansiReset() << std::endl;
         return false;
     }
     
-    // Send base64 encoded password
+    // Base64 encoded Password
     send_data(base64_encode(password) + "\r\n");
     if (!check_response(235)) {
         std::cerr << ansiColor(31) << "Error: Password authentication failed" << ansiReset() << std::endl;
@@ -196,7 +199,7 @@ bool SMTPClient::send_email(const std::string& from, const std::string& to,
         return false;
     }
     
-    // Email headers and body
+    // Email Headers and Body
     time_t now = time(0);
     char date_buf[100];
     strftime(date_buf, sizeof(date_buf), "%a, %d %b %Y %H:%M:%S %z", localtime(&now));
