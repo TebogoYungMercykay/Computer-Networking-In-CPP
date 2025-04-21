@@ -7,7 +7,6 @@
 
 class AlarmSystem {
     private:
-        std::map<char, std::string> sensors;
         Config config;
         std::string current_recipient_email;
         
@@ -19,14 +18,11 @@ class AlarmSystem {
         
     public:
         AlarmSystem();
-        void displaySensors();
         void changeRecipientEmail();
-        void trigger_alarm(char sensor_key);
-        void sendTestAlert();
+        void triggerAlert();
         void run();
 };
 
-// Function to load configuration from .env file
 Config load_config();
 
 #endif // ALARM_SYSTEM_H
