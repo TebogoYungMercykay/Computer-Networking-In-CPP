@@ -17,7 +17,6 @@ struct Config {
         use_ssl = true;
         host = "smtp.gmail.com";
         
-        // using empty string as default value
         sender_email = "";
         password = "";
         receiver_email = "";
