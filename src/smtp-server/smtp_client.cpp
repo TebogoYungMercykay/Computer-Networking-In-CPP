@@ -57,18 +57,6 @@ bool SMTPClient::check_response(int expected_code) {
 // ---- Public methods ----
 
 SMTPClient::SMTPClient(bool use_ssl) {
-    // if (use_ssl) {
-    //     SSL_library_init();
-    //     OpenSSL_add_all_algorithms();
-    //     SSL_load_error_strings();
-    //     ctx = SSL_CTX_new(TLS_client_method());
-        
-    //     if (!ctx) {
-    //         ERR_print_errors_fp(stderr);
-    //         exit(EXIT_FAILURE);
-    //     }
-    // }
-
     socket_fd = -1;
     ssl = nullptr;
     ctx = nullptr;
