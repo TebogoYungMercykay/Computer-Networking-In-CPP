@@ -219,7 +219,6 @@ bool AlarmSystem::sendAlertEmail(const std::string& subject, const std::string& 
     
     smtp.quit();
     
-    std::cout << ansiColor(32) << "Email alert sent successfully!" << ansiReset() << std::endl;
     return true;
 }
 
