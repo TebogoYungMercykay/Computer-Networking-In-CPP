@@ -7,7 +7,7 @@
 # 	USE_SSL=true
 
 main:
-	g++ -g *.cpp -std=c++17 -pedantic -lssl -lcrypto -o main
+	g++ -g *.cpp -std=c++17 -pedantic -Wall -Wextra -I/usr/include/openssl -L/usr/lib -lssl -lcrypto -o main
 
 clean:
 	rm -f *.o *.gcov *.gcda *.gcno *.gz *.html main *.css output.txt coverage.txt
