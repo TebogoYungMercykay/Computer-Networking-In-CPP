@@ -56,11 +56,11 @@ bool SMTPClient::check_response(int expected_code) {
 
 // ---- Public methods ----
 
-SMTPClient::SMTPClient(bool use_ssl) {
+SMTPClient::SMTPClient(bool param_ssl) {
     socket_fd = -1;
     ssl = nullptr;
     ctx = nullptr;
-    use_ssl = use_ssl;
+    use_ssl = param_ssl;
 }
 
 SMTPClient::~SMTPClient() {
