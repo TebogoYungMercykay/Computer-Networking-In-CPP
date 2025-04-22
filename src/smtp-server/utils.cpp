@@ -4,6 +4,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <fcntl.h>
+#include <string.h>
 
 std::string ansiColor(int color) {
     return "\033[" + std::to_string(color) + "m";
@@ -27,17 +28,22 @@ std::string base64_encode(const std::string& input) {
     unsigned char char_array_3[3];
     unsigned char char_array_4[4];
     int in_len = input.size();
+    int input_index = 0;
     
     while (in_len--) {
-        char_array_3[i++] = input[i-1];
+        // Fix: Use separate variables for indexing
+        char_array_3[i] = input[input_index];
+        i++;
+        input_index++;
+        
         if (i == 3) {
             char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
             char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
             char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
             char_array_4[3] = char_array_3[2] & 0x3f;
 
-            for(i = 0; i < 4; i++)
-                encoded += base64_chars[char_array_4[i]];
+            for(int j = 0; j < 4; j++)
+                encoded += base64_chars[char_array_4[j]];
             i = 0;
         }
     }
@@ -64,7 +70,9 @@ std::string base64_encode(const std::string& input) {
 // Read character without waiting for Enter key
 char getch_nonblock() {
     char buf = 0;
-    struct termios old = {0};
+    struct termios old;
+    memset(&old, 0, sizeof(old));
+    
     if (tcgetattr(0, &old) < 0)
         perror("tcsetattr()");
     
