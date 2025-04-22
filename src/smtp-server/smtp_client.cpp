@@ -16,7 +16,7 @@
 // ---- Private methods ----
 
 bool SMTPClient::send_data(const std::string& data) {
-    if (use_ssl) {
+    if (use_ssl && ssl) {
         return SSL_write(ssl, data.c_str(), data.length()) > 0;
     } else {
         return send(socket_fd, data.c_str(), data.length(), 0) > 0;
@@ -27,7 +27,7 @@ std::string SMTPClient::receive_data() {
     char buffer[1024] = {0};
     int bytes_read;
     
-    if (use_ssl) {
+    if (use_ssl && ssl) {
         bytes_read = SSL_read(ssl, buffer, sizeof(buffer) - 1);
     } else {
         bytes_read = recv(socket_fd, buffer, sizeof(buffer) - 1, 0);
@@ -47,6 +47,7 @@ bool SMTPClient::check_response(int expected_code) {
     
     try {
         int response_code = std::stoi(response.substr(0, 3));
+        std::cout << "Respose Code: " << response_code << std::endl;
         return response_code == expected_code;
     } catch (...) {
         return false;
@@ -55,18 +56,23 @@ bool SMTPClient::check_response(int expected_code) {
 
 // ---- Public methods ----
 
-SMTPClient::SMTPClient(bool use_ssl) : socket_fd(-1), ssl(nullptr), ctx(nullptr), use_ssl(use_ssl) {
-    if (use_ssl) {
-        SSL_library_init();
-        OpenSSL_add_all_algorithms();
-        SSL_load_error_strings();
-        ctx = SSL_CTX_new(TLS_client_method());
+SMTPClient::SMTPClient(bool use_ssl) {
+    // if (use_ssl) {
+    //     SSL_library_init();
+    //     OpenSSL_add_all_algorithms();
+    //     SSL_load_error_strings();
+    //     ctx = SSL_CTX_new(TLS_client_method());
         
-        if (!ctx) {
-            ERR_print_errors_fp(stderr);
-            exit(EXIT_FAILURE);
-        }
-    }
+    //     if (!ctx) {
+    //         ERR_print_errors_fp(stderr);
+    //         exit(EXIT_FAILURE);
+    //     }
+    // }
+
+    socket_fd = -1;
+    ssl = nullptr;
+    ctx = nullptr;
+    use_ssl = use_ssl;
 }
 
 SMTPClient::~SMTPClient() {
@@ -99,51 +105,125 @@ bool SMTPClient::connect_to_server(const std::string& host, int port) {
         return false;
     }
     
-    // Initial Response from Server
-    if (!check_response(220)) {
+    // Initial response from server (non-SSL)
+    char buffer[1024] = {0};
+    int bytes_read = recv(socket_fd, buffer, sizeof(buffer) - 1, 0);
+    if (bytes_read <= 0) {
+        std::cerr << ansiColor(31) << "Error: Failed to receive initial server response" << ansiReset() << std::endl;
+        close(socket_fd);
+        socket_fd = -1;
+        return false;
+    }
+    buffer[bytes_read] = '\0';
+    std::cout << ansiColor(90) << "Server: " << buffer << ansiReset();
+    
+    // Check if the response starts with "220"
+    if (strncmp(buffer, "220", 3) != 0) {
         std::cerr << ansiColor(31) << "Error: Server did not respond with ready status" << ansiReset() << std::endl;
         close(socket_fd);
         socket_fd = -1;
         return false;
     }
     
-    // SSL/TLS connections
-    if (use_ssl) {
+    // Send EHLO (non-SSL initially)
+    std::string ehlo_cmd = "EHLO " + host + "\r\n";
+    send(socket_fd, ehlo_cmd.c_str(), ehlo_cmd.length(), 0);
+    
+    // Read response to EHLO (non-SSL)
+    bytes_read = recv(socket_fd, buffer, sizeof(buffer) - 1, 0);
+    if (bytes_read <= 0) {
+        std::cerr << ansiColor(31) << "Error: Failed to receive EHLO response" << ansiReset() << std::endl;
+        close(socket_fd);
+        socket_fd = -1;
+        return false;
+    }
+    buffer[bytes_read] = '\0';
+    std::cout << ansiColor(90) << "Server: " << buffer << ansiReset();
+    
+    // Check if the response starts with "250"
+    if (strncmp(buffer, "250", 3) != 0) {
+        std::cerr << ansiColor(31) << "Error: EHLO command failed" << ansiReset() << std::endl;
+        close(socket_fd);
+        socket_fd = -1;
+        return false;
+    }
+    
+    // For Gmail we always need to use STARTTLS
+    if (host.find("gmail") != std::string::npos || use_ssl) {
+        // Send STARTTLS command (non-SSL)
+        std::string starttls_cmd = "STARTTLS\r\n";
+        send(socket_fd, starttls_cmd.c_str(), starttls_cmd.length(), 0);
+        
+        // Read response to STARTTLS (non-SSL)
+        bytes_read = recv(socket_fd, buffer, sizeof(buffer) - 1, 0);
+        if (bytes_read <= 0) {
+            std::cerr << ansiColor(31) << "Error: Failed to receive STARTTLS response" << ansiReset() << std::endl;
+            close(socket_fd);
+            socket_fd = -1;
+            return false;
+        }
+        buffer[bytes_read] = '\0';
+        std::cout << ansiColor(90) << "Server: " << buffer << ansiReset();
+        
+        // Check if the response starts with "220"
+        if (strncmp(buffer, "220", 3) != 0) {
+            std::cerr << ansiColor(31) << "Error: STARTTLS command failed" << ansiReset() << std::endl;
+            close(socket_fd);
+            socket_fd = -1;
+            return false;
+        }
+        
+        // Initialize SSL
+        if (ctx == nullptr) {
+            SSL_library_init();
+            OpenSSL_add_all_algorithms();
+            SSL_load_error_strings();
+            ctx = SSL_CTX_new(TLS_client_method());
+            
+            if (!ctx) {
+                ERR_print_errors_fp(stderr);
+                std::cerr << ansiColor(31) << "Error: Failed to create SSL context" << ansiReset() << std::endl;
+                close(socket_fd);
+                socket_fd = -1;
+                return false;
+            }
+        }
+        
+        // Create new SSL connection
         ssl = SSL_new(ctx);
+        if (!ssl) {
+            std::cerr << ansiColor(31) << "Error: Failed to create SSL structure" << ansiReset() << std::endl;
+            close(socket_fd);
+            socket_fd = -1;
+            return false;
+        }
+        
         SSL_set_fd(ssl, socket_fd);
         
-        // EHLO before starting TLS
-        std::string ehlo_cmd = "EHLO " + host + "\r\n";
-        send_data(ehlo_cmd);
-        if (!check_response(250)) {
-            std::cerr << ansiColor(31) << "Error: EHLO command failed" << ansiReset() << std::endl;
-            return false;
-        }
-        
-        // Start TLS
-        send_data("STARTTLS\r\n");
-        if (!check_response(220)) {
-            std::cerr << ansiColor(31) << "Error: STARTTLS command failed" << ansiReset() << std::endl;
-            return false;
-        }
-        
+        // Connect with SSL
         if (SSL_connect(ssl) != 1) {
             std::cerr << ansiColor(31) << "Error: SSL connection failed" << ansiReset() << std::endl;
             ERR_print_errors_fp(stderr);
+            SSL_free(ssl);
+            ssl = nullptr;
+            close(socket_fd);
+            socket_fd = -1;
             return false;
         }
         
-        // EHLO again after TLS Established
-        send_data(ehlo_cmd);
+        // EHLO again after TLS established
+        if (!send_data(ehlo_cmd)) {
+            std::cerr << ansiColor(31) << "Error: Failed to send EHLO after TLS" << ansiReset() << std::endl;
+            return false;
+        }
+        
         if (!check_response(250)) {
             std::cerr << ansiColor(31) << "Error: EHLO command failed after TLS" << ansiReset() << std::endl;
             return false;
         }
-    } else {
-        // HELO for non-SSL connections
-        std::string helo_cmd = "HELO " + host + "\r\n";
-        send_data(helo_cmd);
-        return check_response(250);
+        
+        // Set use_ssl to true since we're now using SSL
+        use_ssl = true;
     }
     
     return true;
