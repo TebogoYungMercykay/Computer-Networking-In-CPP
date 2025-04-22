@@ -47,7 +47,6 @@ bool SMTPClient::check_response(int expected_code) {
     
     try {
         int response_code = std::stoi(response.substr(0, 3));
-        std::cout << "Respose Code: " << response_code << std::endl;
         return response_code == expected_code;
     } catch (...) {
         return false;
@@ -217,6 +216,7 @@ bool SMTPClient::connect_to_server(const std::string& host, int port) {
     return true;
 }
 
+// * Secure Implementation
 bool SMTPClient::authenticate(const std::string& username, const std::string& password) {
     // AUTH LOGIN command
     send_data("AUTH LOGIN\r\n");
