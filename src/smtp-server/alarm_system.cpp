@@ -72,7 +72,7 @@ void AlarmSystem::showWelcomeScreen() {
     std::cout << "║                  ███████║██║ ╚═╝ ██║   ██║   ██║                       ║" << std::endl;
     std::cout << "║                  ╚══════╝╚═╝     ╚═╝   ╚═╝   ╚═╝                       ║" << std::endl;
     std::cout << "║                                                                        ║" << std::endl;
-    std::cout << "║              Welcome to the SMTP Client Test System!                   ║" << std::endl;
+    std::cout << "║              Welcome to the SMTP Client Alert System!                  ║" << std::endl;
     std::cout << "║                                                                        ║" << std::endl;
     std::cout << "╚════════════════════════════════════════════════════════════════════════╝" << ansiReset() << std::endl;
     std::cout << std::endl;
@@ -81,7 +81,7 @@ void AlarmSystem::showWelcomeScreen() {
 void AlarmSystem::showMainMenu() {
     std::cout << ansiColor(33) << "Current time: " << getCurrentTimeString() << "\n\n";
     std::cout << "MAIN MENU:" << ansiReset() << std::endl;
-    std::cout << "1. Send Test Alert" << std::endl;
+    std::cout << "1. Send Email Alert" << std::endl;
     std::cout << "2. Change Recipient Email" << std::endl;
     std::cout << "3. Exit" << std::endl;
     std::cout << std::endl;
@@ -104,7 +104,7 @@ void AlarmSystem::showHelpScreen() {
     std::cout << std::endl;
     
     std::cout << ansiColor(33) << "AVAILABLE COMMANDS:" << ansiReset() << std::endl;
-    std::cout << "1. Send Test Alert - Send a test email to verify your configuration" << std::endl;
+    std::cout << "1. Send Email Alert - Send alert email for the home security system" << std::endl;
     std::cout << "2. Change Recipient Email - Update the email address that will receive alerts" << std::endl;
     std::cout << "3. Exit - Close the application" << std::endl;
     std::cout << "h - Display this help screen" << std::endl;
@@ -168,7 +168,7 @@ void AlarmSystem::changeRecipientEmail() {
 }
 
 void AlarmSystem::triggerAlert() {
-    std::cout << ansiColor(36) << "\nSending test alert email to " << current_recipient_email << "..." << ansiReset() << std::endl;
+    std::cout << ansiColor(36) << "\nSending alert email to " << current_recipient_email << "..." << ansiReset() << std::endl;
     
     std::string current_time = getCurrentTimeString();
     std::string subject = "Email Alert from Home Security System";
