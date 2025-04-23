@@ -1,11 +1,11 @@
-// Config - Structure to store SMTP and POP3 config information
+// Config - Structure to store POP3 config information
 #ifndef CONFIG_H
 #define CONFIG_H
 
 #include <string>
 
 struct Config {
-    // POP3 configuration
+    // Configuration
     std::string pop3_host;
     int pop3_port;
     bool pop3_use_ssl;
@@ -13,7 +13,6 @@ struct Config {
     std::string password;
 
     Config() {
-        // Default POP3 settings
         pop3_port = 995;
         pop3_use_ssl = true;
         pop3_host = "pop.gmail.com";
