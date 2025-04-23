@@ -16,11 +16,12 @@ class EmailManager {
         void showWelcomeScreen();
         void showMainMenu();
         void showHelpScreen();
-        bool connectToMailbox();
+        void connectToServer();
         void refreshEmailList();
         void showEmailList();
         void toggleEmailSelection(int index);
         void deleteSelectedEmails();
+        void viewLatestEmail();
         
     public:
         EmailManager();
