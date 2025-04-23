@@ -18,7 +18,7 @@ run:
 	valgrind --leak-check=full --show-leak-kinds=all ./main
 
 tar:
-	tar -cvz *.* makefile -f ldap.tar.gz
+	tar -cvz *.* makefile -f smtp.tar.gz
 
 untar:
 	tar -zxvf *.tar.gz
