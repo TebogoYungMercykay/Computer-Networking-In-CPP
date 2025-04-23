@@ -66,7 +66,7 @@ std::string POP3Client::receive_response(int timeout_seconds) {
         FD_ZERO(&read_fds);
         FD_SET(socket_fd, &read_fds);
         
-        tv.tv_sec = 1;  // Check every second
+        tv.tv_sec = 1; 
         tv.tv_usec = 0;
         
         select_result = select(socket_fd + 1, &read_fds, NULL, NULL, &tv);
@@ -75,7 +75,6 @@ std::string POP3Client::receive_response(int timeout_seconds) {
             std::cerr << ansiColor(31) << "Error: Select failed: " << strerror(errno) << ansiReset() << std::endl;
             break;
         } else if (select_result == 0) {
-            // Timeout on select, continue loop
             continue;
         }
         
@@ -87,10 +86,8 @@ std::string POP3Client::receive_response(int timeout_seconds) {
             if (bytes_read <= 0) {
                 int ssl_error = SSL_get_error(ssl, bytes_read);
                 if (ssl_error == SSL_ERROR_WANT_READ || ssl_error == SSL_ERROR_WANT_WRITE) {
-                    // Need to retry
                     continue;
                 } else {
-                    // Real error
                     ERR_print_errors_fp(stderr);
                     break;
                 }
@@ -100,15 +97,12 @@ std::string POP3Client::receive_response(int timeout_seconds) {
             
             if (bytes_read < 0) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    // No data available yet
                     continue;
                 } else {
-                    // Real error
                     std::cerr << ansiColor(31) << "Error: Receive failed: " << strerror(errno) << ansiReset() << std::endl;
                     break;
                 }
             } else if (bytes_read == 0) {
-                // Connection closed
                 break;
             }
         }
@@ -141,11 +135,25 @@ bool POP3Client::check_response(const std::string& expected_prefix) {
 }
 
 std::string POP3Client::extract_message_header(const std::string& header_data, const std::string& header_name) {
-    std::regex header_regex(header_name + ":\\s*([^\r\n]+)", std::regex_constants::icase);
+    std::regex header_regex(header_name + ":\\s*([^\r\n]+)(\r\n\\s+[^\r\n]+)*", std::regex_constants::icase);
     std::smatch matches;
     
     if (std::regex_search(header_data, matches, header_regex) && matches.size() > 1) {
-        return matches[1].str();
+        std::string result = matches[1].str();
+        
+        for (size_t i = 2; i < matches.size(); i++) {
+            if (matches[i].length() > 0) {
+                result += " " + matches[i].str();
+            }
+        }
+        
+        result.erase(0, result.find_first_not_of(" \t"));
+        size_t end = result.find_last_not_of(" \t\r\n");
+        if (end != std::string::npos) {
+            result.erase(end + 1);
+        }
+        
+        return result;
     }
     
     return "";
@@ -261,7 +269,7 @@ bool POP3Client::connect_to_server(const std::string& host, int port) {
         }
         
         // Get the initial server greeting over SSL
-        std::string greeting = receive_response(10);  // 10 seconds timeout
+        std::string greeting = receive_response(10);
         if (greeting.empty() || greeting.compare(0, 3, "+OK") != 0) {
             std::cerr << ansiColor(31) << "Error: Invalid server greeting or no response" << ansiReset() << std::endl;
             close_connection();
@@ -343,13 +351,11 @@ bool POP3Client::get_mailbox_status(int& message_count, int& mailbox_size) {
 std::vector<EmailInfo> POP3Client::list_messages() {
     std::vector<EmailInfo> email_list;
     
-    // First, get message count with STAT
     int message_count, mailbox_size;
     if (!get_mailbox_status(message_count, mailbox_size)) {
-        return email_list; // Return empty list on failure
+        return email_list;
     }
     
-    // Get message sizes with LIST
     if (!send_command("LIST")) {
         std::cerr << ansiColor(31) << "Error: Failed to send LIST command" << ansiReset() << std::endl;
         return email_list;
@@ -366,17 +372,13 @@ std::vector<EmailInfo> POP3Client::list_messages() {
     std::istringstream iss(response);
     std::string line;
     
-    // Skip the first line with +OK
     std::getline(iss, line);
     
-    // Parse each message line
     while (std::getline(iss, line)) {
-        // Remove \r if present
         if (!line.empty() && line.back() == '\r') {
             line.pop_back();
         }
         
-        // Stop at terminating "."
         if (line == ".") {
             break;
         }
@@ -404,13 +406,28 @@ std::vector<EmailInfo> POP3Client::list_messages() {
             continue;
         }
         
-        // Extract email info
         EmailInfo email;
         email.id = msg_id;
         email.size_bytes = msg_size;
+        
         email.from = extract_message_header(headers, "From");
         email.subject = extract_message_header(headers, "Subject");
         email.date = extract_message_header(headers, "Date");
+        
+        if (email.from.empty()) {
+            email.from = extract_message_header(headers, "Sender");
+            if (email.from.empty()) {
+                email.from = extract_message_header(headers, "Return-Path");
+                if (email.from.empty()) {
+                    email.from = "(Unknown Sender)";
+                }
+            }
+        }
+        
+        if (email.subject.empty()) {
+            email.subject = "(No Subject)";
+        }
+        
         email.marked_for_deletion = false;
         
         email_list.push_back(email);
@@ -418,7 +435,6 @@ std::vector<EmailInfo> POP3Client::list_messages() {
     
     return email_list;
 }
-
 bool POP3Client::delete_message(int message_id) {
     if (!send_command("DELE " + std::to_string(message_id))) {
         std::cerr << ansiColor(31) << "Error: Failed to send DELE command" << ansiReset() << std::endl;
@@ -463,7 +479,7 @@ std::string POP3Client::retrieve_message(int message_id) {
         return "";
     }
     
-    std::string response = receive_response(30);  // Longer timeout for message retrieval
+    std::string response = receive_response(30);
     if (response.compare(0, 3, "+OK") != 0) {
         std::cerr << ansiColor(31) << "Error: RETR command failed" << ansiReset() << std::endl;
         return "";
