@@ -213,7 +213,6 @@ void EmailManager::viewLatestEmail() {
         return;
     }
     
-    // Display email headers and content
     std::cout << clearScreen();
     std::cout << ansiColor(36) << "╔════════════════════════════════════════════════════════════════════════╗" << std::endl;
     std::cout << "║                            LATEST EMAIL                                ║" << std::endl;
@@ -233,6 +232,32 @@ void EmailManager::viewLatestEmail() {
         if (dot_pos != std::string::npos) {
             body = body.substr(0, dot_pos);
         }
+        
+        if (email_content.find("Content-Transfer-Encoding: quoted-printable") != std::string::npos) {
+            size_t pos = 0;
+            while ((pos = body.find("=\r\n", pos)) != std::string::npos) {
+                body.erase(pos, 3);
+            }
+            
+            pos = 0;
+            while ((pos = body.find('=', pos)) != std::string::npos) {
+                if (pos + 2 < body.length()) {
+                    try {
+                        std::string hex = body.substr(pos + 1, 2);
+                        int value;
+                        std::stringstream ss;
+                        ss << std::hex << hex;
+                        ss >> value;
+                        body.replace(pos, 3, 1, static_cast<char>(value));
+                    } catch (...) {
+                        pos++;
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
+        
         std::cout << body << std::endl;
     } else {
         std::cout << "Unable to extract message body." << std::endl;
@@ -302,7 +327,6 @@ void EmailManager::showEmailList() {
         if (email_list.empty()) {
             std::cout << "No emails in mailbox." << std::endl;
         } else {
-            // Display column headers
             std::cout << ansiColor(33);
             std::cout << std::setw(5) << "ID" << " | ";
             std::cout << std::setw(6) << "Size" << " | ";
@@ -310,7 +334,6 @@ void EmailManager::showEmailList() {
             std::cout << "Subject" << ansiReset() << std::endl;
             std::cout << "─────────────────────────────────────────────────────────────────────────" << std::endl;
             
-            // Display emails
             for (size_t i = 0; i < email_list.size(); i++) {
                 const EmailInfo& email = email_list[i];
                 
@@ -322,6 +345,16 @@ void EmailManager::showEmailList() {
                 std::cout << std::setw(4) << (email.size_bytes / 1024) << "KB" << " | ";
                 
                 std::string from = email.from;
+                size_t lt_pos = from.find('<');
+                size_t gt_pos = from.find('>');
+                if (lt_pos != std::string::npos && gt_pos != std::string::npos && lt_pos < gt_pos) {
+                    if (lt_pos > 0) {
+                        from = from.substr(0, lt_pos);
+                    } else {
+                        from = from.substr(lt_pos + 1, gt_pos - lt_pos - 1);
+                    }
+                }
+                
                 if (from.length() > 28) {
                     from = from.substr(0, 25) + "...";
                 }
@@ -331,8 +364,7 @@ void EmailManager::showEmailList() {
                 if (subject.empty()) {
                     subject = "(No Subject)";
                 }
-                // Limit to available width
-                size_t subject_max_width = 50;
+                size_t subject_max_width = 40;
                 if (subject.length() > subject_max_width) {
                     subject = subject.substr(0, subject_max_width - 3) + "...";
                 }
@@ -363,7 +395,6 @@ void EmailManager::showEmailList() {
         } else {
             try {
                 int msg_num = std::stoi(input);
-                // Find the message in our list
                 for (size_t i = 0; i < email_list.size(); i++) {
                     if (email_list[i].id == msg_num) {
                         toggleEmailSelection(i);
