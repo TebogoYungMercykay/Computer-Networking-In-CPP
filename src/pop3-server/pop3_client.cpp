@@ -1,5 +1,4 @@
-// ---- POP3 Client Class Implementation ----
-
+// pop3_client.cpp
 #include "pop3_client.h"
 #include "utils.h"
 #include <iostream>
@@ -13,6 +12,8 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <regex>
+#include <fcntl.h>
+#include <errno.h>
 
 // ---- Private methods ----
 
@@ -21,48 +22,113 @@ bool POP3Client::send_command(const std::string& command) {
     
     std::cout << ansiColor(90) << "Client: " << command << ansiReset() << std::endl;
     
+    int result = 0;
     if (use_ssl && ssl) {
-        return SSL_write(ssl, cmd_with_crlf.c_str(), cmd_with_crlf.length()) > 0;
+        result = SSL_write(ssl, cmd_with_crlf.c_str(), cmd_with_crlf.length());
     } else {
-        return send(socket_fd, cmd_with_crlf.c_str(), cmd_with_crlf.length(), 0) > 0;
+        result = send(socket_fd, cmd_with_crlf.c_str(), cmd_with_crlf.length(), 0);
     }
+    
+    if (result <= 0) {
+        if (use_ssl) {
+            ERR_print_errors_fp(stderr);
+        }
+        return false;
+    }
+    return true;
 }
 
-std::string POP3Client::receive_response() {
+std::string POP3Client::receive_response(int timeout_seconds) {
     char buffer[4096] = {0};
     int bytes_read;
     std::string complete_response;
     
-    if (use_ssl && ssl) {
-        bytes_read = SSL_read(ssl, buffer, sizeof(buffer) - 1);
-    } else {
-        bytes_read = recv(socket_fd, buffer, sizeof(buffer) - 1, 0);
+    // Set socket to non-blocking mode
+    if (!use_ssl) {
+        int flags = fcntl(socket_fd, F_GETFL, 0);
+        fcntl(socket_fd, F_SETFL, flags | O_NONBLOCK);
     }
     
-    if (bytes_read > 0) {
-        buffer[bytes_read] = '\0';
-        complete_response = std::string(buffer);
+    // Wait for data with timeout
+    fd_set read_fds;
+    struct timeval tv;
+    int select_result;
+    
+    time_t start_time = time(NULL);
+    
+    while (true) {
+        // Check if we've timed out
+        if (time(NULL) - start_time > timeout_seconds) {
+            std::cerr << ansiColor(31) << "Error: Receive timeout" << ansiReset() << std::endl;
+            break;
+        }
         
-        // For multiline responses in POP3
-        if (bytes_read == sizeof(buffer) - 1) {
-            while (true) {
-                if (use_ssl && ssl) {
-                    bytes_read = SSL_read(ssl, buffer, sizeof(buffer) - 1);
+        FD_ZERO(&read_fds);
+        FD_SET(socket_fd, &read_fds);
+        
+        tv.tv_sec = 1;  // Check every second
+        tv.tv_usec = 0;
+        
+        select_result = select(socket_fd + 1, &read_fds, NULL, NULL, &tv);
+        
+        if (select_result == -1) {
+            std::cerr << ansiColor(31) << "Error: Select failed: " << strerror(errno) << ansiReset() << std::endl;
+            break;
+        } else if (select_result == 0) {
+            // Timeout on select, continue loop
+            continue;
+        }
+        
+        // Data is available to read
+        if (use_ssl && ssl) {
+            bytes_read = SSL_read(ssl, buffer, sizeof(buffer) - 1);
+            
+            // Handle SSL errors
+            if (bytes_read <= 0) {
+                int ssl_error = SSL_get_error(ssl, bytes_read);
+                if (ssl_error == SSL_ERROR_WANT_READ || ssl_error == SSL_ERROR_WANT_WRITE) {
+                    // Need to retry
+                    continue;
                 } else {
-                    bytes_read = recv(socket_fd, buffer, sizeof(buffer) - 1, 0);
-                }
-                
-                if (bytes_read <= 0) break;
-                
-                buffer[bytes_read] = '\0';
-                complete_response += std::string(buffer);
-                
-                // Check if we've reached the end of the response (line with just a period)
-                if (complete_response.find("\r\n.\r\n") != std::string::npos) {
+                    // Real error
+                    ERR_print_errors_fp(stderr);
                     break;
                 }
             }
+        } else {
+            bytes_read = recv(socket_fd, buffer, sizeof(buffer) - 1, 0);
+            
+            if (bytes_read < 0) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    // No data available yet
+                    continue;
+                } else {
+                    // Real error
+                    std::cerr << ansiColor(31) << "Error: Receive failed: " << strerror(errno) << ansiReset() << std::endl;
+                    break;
+                }
+            } else if (bytes_read == 0) {
+                // Connection closed
+                break;
+            }
         }
+        
+        buffer[bytes_read] = '\0';
+        complete_response += std::string(buffer);
+        
+        // Check if we've received a complete response
+        if (!use_ssl || 
+            (complete_response.find("\r\n.\r\n") != std::string::npos) || 
+            (complete_response.find("\r\n") != std::string::npos && 
+             complete_response.find("+OK") == 0)) {
+            break;
+        }
+    }
+    
+    // Restore socket to blocking mode
+    if (!use_ssl) {
+        int flags = fcntl(socket_fd, F_GETFL, 0);
+        fcntl(socket_fd, F_SETFL, flags & ~O_NONBLOCK);
     }
     
     std::cout << ansiColor(90) << "Server: " << complete_response << ansiReset();
@@ -92,6 +158,15 @@ POP3Client::POP3Client(bool param_ssl) {
     ssl = nullptr;
     ctx = nullptr;
     use_ssl = param_ssl;
+    
+    // Initialize OpenSSL once
+    static bool ssl_initialized = false;
+    if (!ssl_initialized) {
+        SSL_library_init();
+        OpenSSL_add_all_algorithms();
+        SSL_load_error_strings();
+        ssl_initialized = true;
+    }
 }
 
 POP3Client::~POP3Client() {
@@ -99,83 +174,53 @@ POP3Client::~POP3Client() {
 }
 
 bool POP3Client::connect_to_server(const std::string& host, int port) {
+    // Close any existing connection
+    close_connection();
+    
+    // Resolve hostname
     struct hostent *server = gethostbyname(host.c_str());
     if (server == nullptr) {
         std::cerr << ansiColor(31) << "Error: Could not resolve hostname " << host << ansiReset() << std::endl;
         return false;
     }
     
+    // Create socket
     socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_fd < 0) {
         std::cerr << ansiColor(31) << "Error: Could not create socket" << ansiReset() << std::endl;
         return false;
     }
     
+    // Set socket timeout
+    struct timeval timeout;
+    timeout.tv_sec = 15;
+    timeout.tv_usec = 0;
+    if (setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+        std::cerr << ansiColor(31) << "Warning: Could not set socket receive timeout" << ansiReset() << std::endl;
+    }
+    if (setsockopt(socket_fd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+        std::cerr << ansiColor(31) << "Warning: Could not set socket send timeout" << ansiReset() << std::endl;
+    }
+    
+    // Setup server address
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);
     memcpy(&server_addr.sin_addr.s_addr, server->h_addr, server->h_length);
     
+    // Connect to server
+    std::cout << "Connecting to " << host << " on port " << port << "..." << std::endl;
     if (connect(socket_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-        std::cerr << ansiColor(31) << "Error: Connection failed" << ansiReset() << std::endl;
+        std::cerr << ansiColor(31) << "Error: Connection failed: " << strerror(errno) << ansiReset() << std::endl;
         close(socket_fd);
         socket_fd = -1;
         return false;
     }
     
-    // Initial greeting from server (non-SSL)
-    char buffer[1024] = {0};
-    int bytes_read = recv(socket_fd, buffer, sizeof(buffer) - 1, 0);
-    if (bytes_read <= 0) {
-        std::cerr << ansiColor(31) << "Error: Failed to receive initial server response" << ansiReset() << std::endl;
-        close(socket_fd);
-        socket_fd = -1;
-        return false;
-    }
-    buffer[bytes_read] = '\0';
-    std::cout << ansiColor(90) << "Server: " << buffer << ansiReset();
-    
-    // Check if the response starts with "+OK"
-    if (strncmp(buffer, "+OK", 3) != 0) {
-        std::cerr << ansiColor(31) << "Error: Server did not respond with ready status" << ansiReset() << std::endl;
-        close(socket_fd);
-        socket_fd = -1;
-        return false;
-    }
-    
-    // For SSL connections (POP3S)
+    // For SSL connections
     if (use_ssl) {
-        // Initialize SSL
-        SSL_library_init();
-        OpenSSL_add_all_algorithms();
-        SSL_load_error_strings();
-        
-        // For explicit TLS (STLS command)
-        if (host.find("gmail") != std::string::npos) {
-            // Send STLS command
-            std::string stls_cmd = "STLS";
-            send(socket_fd, (stls_cmd + "\r\n").c_str(), stls_cmd.length() + 2, 0);
-            
-            // Read response
-            bytes_read = recv(socket_fd, buffer, sizeof(buffer) - 1, 0);
-            if (bytes_read <= 0) {
-                std::cerr << ansiColor(31) << "Error: Failed to receive STLS response" << ansiReset() << std::endl;
-                close(socket_fd);
-                socket_fd = -1;
-                return false;
-            }
-            buffer[bytes_read] = '\0';
-            std::cout << ansiColor(90) << "Server: " << buffer << ansiReset();
-            
-            // Check if response starts with "+OK"
-            if (strncmp(buffer, "+OK", 3) != 0) {
-                std::cerr << ansiColor(31) << "Error: STLS command failed" << ansiReset() << std::endl;
-                close(socket_fd);
-                socket_fd = -1;
-                return false;
-            }
-        }
+        std::cout << "Initializing SSL connection..." << std::endl;
         
         // Create SSL context
         ctx = SSL_CTX_new(TLS_client_method());
@@ -191,6 +236,8 @@ bool POP3Client::connect_to_server(const std::string& host, int port) {
         ssl = SSL_new(ctx);
         if (!ssl) {
             std::cerr << ansiColor(31) << "Error: Failed to create SSL structure" << ansiReset() << std::endl;
+            SSL_CTX_free(ctx);
+            ctx = nullptr;
             close(socket_fd);
             socket_fd = -1;
             return false;
@@ -199,11 +246,43 @@ bool POP3Client::connect_to_server(const std::string& host, int port) {
         SSL_set_fd(ssl, socket_fd);
         
         // Connect with SSL
-        if (SSL_connect(ssl) != 1) {
-            std::cerr << ansiColor(31) << "Error: SSL connection failed" << ansiReset() << std::endl;
+        int ssl_connect_result = SSL_connect(ssl);
+        if (ssl_connect_result != 1) {
+            int ssl_error = SSL_get_error(ssl, ssl_connect_result);
+            std::cerr << ansiColor(31) << "Error: SSL connection failed with error code: " << ssl_error << ansiReset() << std::endl;
             ERR_print_errors_fp(stderr);
             SSL_free(ssl);
             ssl = nullptr;
+            SSL_CTX_free(ctx);
+            ctx = nullptr;
+            close(socket_fd);
+            socket_fd = -1;
+            return false;
+        }
+        
+        // Get the initial server greeting over SSL
+        std::string greeting = receive_response(10);  // 10 seconds timeout
+        if (greeting.empty() || greeting.compare(0, 3, "+OK") != 0) {
+            std::cerr << ansiColor(31) << "Error: Invalid server greeting or no response" << ansiReset() << std::endl;
+            close_connection();
+            return false;
+        }
+    } else {
+        // For non-SSL connections, get the server greeting
+        char buffer[1024] = {0};
+        int bytes_read = recv(socket_fd, buffer, sizeof(buffer) - 1, 0);
+        if (bytes_read <= 0) {
+            std::cerr << ansiColor(31) << "Error: Failed to receive initial server response" << ansiReset() << std::endl;
+            close(socket_fd);
+            socket_fd = -1;
+            return false;
+        }
+        buffer[bytes_read] = '\0';
+        std::cout << ansiColor(90) << "Server: " << buffer << ansiReset();
+        
+        // Check if the response starts with "+OK"
+        if (strncmp(buffer, "+OK", 3) != 0) {
+            std::cerr << ansiColor(31) << "Error: Server did not respond with ready status" << ansiReset() << std::endl;
             close(socket_fd);
             socket_fd = -1;
             return false;
@@ -255,7 +334,7 @@ bool POP3Client::get_mailbox_status(int& message_count, int& mailbox_size) {
     }
     
     // Parse response: +OK {message_count} {mailbox_size}
-    std::istringstream iss(response.substr(4)); // Skip "+OK "
+    std::istringstream iss(response.substr(4));
     iss >> message_count >> mailbox_size;
     
     return true;
@@ -331,6 +410,7 @@ std::vector<EmailInfo> POP3Client::list_messages() {
         email.size_bytes = msg_size;
         email.from = extract_message_header(headers, "From");
         email.subject = extract_message_header(headers, "Subject");
+        email.date = extract_message_header(headers, "Date");
         email.marked_for_deletion = false;
         
         email_list.push_back(email);
@@ -354,11 +434,14 @@ bool POP3Client::quit() {
         return false;
     }
     
-    return check_response("+OK");
+    bool result = check_response("+OK");
+    close_connection();
+    return result;
 }
 
 void POP3Client::close_connection() {
     if (ssl != nullptr) {
+        SSL_shutdown(ssl);
         SSL_free(ssl);
         ssl = nullptr;
     }
@@ -372,4 +455,19 @@ void POP3Client::close_connection() {
         close(socket_fd);
         socket_fd = -1;
     }
+}
+
+std::string POP3Client::retrieve_message(int message_id) {
+    if (!send_command("RETR " + std::to_string(message_id))) {
+        std::cerr << ansiColor(31) << "Error: Failed to send RETR command" << ansiReset() << std::endl;
+        return "";
+    }
+    
+    std::string response = receive_response(30);  // Longer timeout for message retrieval
+    if (response.compare(0, 3, "+OK") != 0) {
+        std::cerr << ansiColor(31) << "Error: RETR command failed" << ansiReset() << std::endl;
+        return "";
+    }
+    
+    return response;
 }
