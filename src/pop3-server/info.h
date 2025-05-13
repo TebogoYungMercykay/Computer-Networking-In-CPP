@@ -11,8 +11,9 @@ struct EmailInfo {
     std::string date;
     int size_bytes;
     bool marked_for_deletion;
+    bool is_confidential;
     
-    EmailInfo() : id(0), size_bytes(0), marked_for_deletion(false) {}
+    EmailInfo() : id(0), size_bytes(0), marked_for_deletion(false), is_confidential(false) {}
 };
 
 #endif // EMAILINFO_H
