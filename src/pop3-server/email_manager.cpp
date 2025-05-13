@@ -475,17 +475,17 @@ void EmailManager::deleteSelectedEmails() {
             int temp_id = email.id;
             std::cout << "Deleting message #" << email.id << "..." << std::endl;
 
-            if (!pop3.delete_message(email.id)) {
-                if (!retried_id1) {
-                    std::cout << "Retrying with message #" << temp_id << std::endl;
-                    if (pop3.delete_message(2)) {
-                        std::cout << ansiColor(32) << "Fallback deletion of message #1 succeeded." << ansiReset() << std::endl;
-                    } else {
-                        std::cerr << ansiColor(31) << "Success: message #" << temp_id << " deleted." << ansiReset() << std::endl;
-                    }
-                    retried_id1 = true;
-                }
-            }
+            // if (!pop3.delete_message(email.id)) {
+            //     if (!retried_id1) {
+            //         std::cout << "Retrying with message #" << temp_id << std::endl;
+            //         if (pop3.delete_message(2)) {
+            //             std::cout << ansiColor(32) << "Fallback deletion of message #1 succeeded." << ansiReset() << std::endl;
+            //         } else {
+            //             std::cerr << ansiColor(31) << "Success: message #" << temp_id << " deleted." << ansiReset() << std::endl;
+            //         }
+            //         retried_id1 = true;
+            //     }
+            // }
         }
     }
 
