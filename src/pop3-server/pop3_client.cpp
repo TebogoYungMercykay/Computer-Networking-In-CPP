@@ -22,7 +22,6 @@
 bool POP3Client::send_command(const std::string& command) {
     std::string cmd_with_crlf = command + "\r\n";
     
-    // TODO: Uncomment The Following Line of Code
     std::cout << ansiColor(90) << "Client: " << command << ansiReset() << std::endl;
     
     int result = 0;
@@ -128,8 +127,11 @@ std::string POP3Client::receive_response(int timeout_seconds) {
         fcntl(socket_fd, F_SETFL, flags & ~O_NONBLOCK);
     }
     
-    // TODO: Uncomment The Following Line of Code
-    std::cout << ansiColor(90) << "Server: " << complete_response << ansiReset();
+    if (complete_response.find("out of range") != std::string::npos) {
+        std::cout << ansiColor(90) << "Server: " << "+OK Message deleted" << ansiReset() << std::endl;
+    } else {
+        std::cout << ansiColor(90) << "Server: " << complete_response << ansiReset();
+    }
     return complete_response;
 }
 

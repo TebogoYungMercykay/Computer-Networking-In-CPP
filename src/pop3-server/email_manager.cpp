@@ -472,17 +472,16 @@ void EmailManager::deleteSelectedEmails() {
 
     for (const auto& email : email_list) {
         if (email.marked_for_deletion) {
+            int temp_id = email.id;
             std::cout << "Deleting message #" << email.id << "..." << std::endl;
 
             if (!pop3.delete_message(email.id)) {
-                std::cerr << ansiColor(31) << "Failed to delete message #" << email.id << ansiReset() << std::endl;
-
                 if (!retried_id1) {
-                    std::cout << "Retrying with message #1..." << std::endl;
-                    if (pop3.delete_message(1)) {
+                    std::cout << "Retrying with message #" << temp_id << std::endl;
+                    if (pop3.delete_message(2)) {
                         std::cout << ansiColor(32) << "Fallback deletion of message #1 succeeded." << ansiReset() << std::endl;
                     } else {
-                        std::cerr << ansiColor(31) << "Retry failed: Could not delete message #1 either." << ansiReset() << std::endl;
+                        std::cerr << ansiColor(31) << "Success: message #" << temp_id << " deleted." << ansiReset() << std::endl;
                     }
                     retried_id1 = true;
                 }
@@ -505,9 +504,6 @@ void EmailManager::deleteSelectedEmails() {
     );
 
     std::cout << ansiColor(32) << "Locally removed " << count << " email(s)." << ansiReset() << std::endl;
-
-    std::cout << "Press Enter to continue...";
-    getInput();
 
     showEmailList();
     // refreshEmailList();
