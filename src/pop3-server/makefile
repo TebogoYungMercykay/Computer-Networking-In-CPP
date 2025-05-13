@@ -10,7 +10,7 @@ main:
 	g++ -g *.cpp -std=c++17 -pedantic -Wall -Wextra -I/usr/include/openssl -L/usr/lib -lssl -lcrypto -o main
 
 clean:
-	rm -f *.o *.gcov *.gcda *.gcno *.gz *.html main *.css output.txt coverage.txt
+	rm -f *.o *.gcov *.gcda *.gcno *.html main *.css output.txt coverage.txt
 	reset
 	clear
 
