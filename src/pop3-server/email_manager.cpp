@@ -472,7 +472,7 @@ void EmailManager::deleteSelectedEmails() {
 
     for (const auto& email : email_list) {
         if (email.marked_for_deletion) {
-            int temp_id = email.id;
+            // int temp_id = email.id;
             std::cout << "Deleting message #" << email.id << "..." << std::endl;
 
             // if (!pop3.delete_message(email.id)) {
