@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 #include <cstring>
+#include <chrono>
+#include <thread>
 #include <sstream>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -20,6 +22,7 @@
 bool POP3Client::send_command(const std::string& command) {
     std::string cmd_with_crlf = command + "\r\n";
     
+    // TODO: Uncomment The Following Line of Code
     std::cout << ansiColor(90) << "Client: " << command << ansiReset() << std::endl;
     
     int result = 0;
@@ -59,7 +62,7 @@ std::string POP3Client::receive_response(int timeout_seconds) {
     while (true) {
         // Check if we've timed out
         if (time(NULL) - start_time > timeout_seconds) {
-            std::cerr << ansiColor(31) << "Error: Receive timeout" << ansiReset() << std::endl;
+            // std::cerr << ansiColor(31) << "Error: Receive timeout" << ansiReset() << std::endl;
             break;
         }
         
@@ -72,7 +75,7 @@ std::string POP3Client::receive_response(int timeout_seconds) {
         select_result = select(socket_fd + 1, &read_fds, NULL, NULL, &tv);
         
         if (select_result == -1) {
-            std::cerr << ansiColor(31) << "Error: Select failed: " << strerror(errno) << ansiReset() << std::endl;
+            // std::cerr << ansiColor(31) << "Error: Select failed: " << strerror(errno) << ansiReset() << std::endl;
             break;
         } else if (select_result == 0) {
             continue;
@@ -99,7 +102,7 @@ std::string POP3Client::receive_response(int timeout_seconds) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
                     continue;
                 } else {
-                    std::cerr << ansiColor(31) << "Error: Receive failed: " << strerror(errno) << ansiReset() << std::endl;
+                    // std::cerr << ansiColor(31) << "Error: Receive failed: " << strerror(errno) << ansiReset() << std::endl;
                     break;
                 }
             } else if (bytes_read == 0) {
@@ -125,6 +128,7 @@ std::string POP3Client::receive_response(int timeout_seconds) {
         fcntl(socket_fd, F_SETFL, flags & ~O_NONBLOCK);
     }
     
+    // TODO: Uncomment The Following Line of Code
     std::cout << ansiColor(90) << "Server: " << complete_response << ansiReset();
     return complete_response;
 }
@@ -135,22 +139,27 @@ bool POP3Client::check_response(const std::string& expected_prefix) {
 }
 
 std::string POP3Client::extract_message_header(const std::string& header_data, const std::string& header_name) {
-    std::regex header_regex(header_name + ":\\s*([^\r\n]+)(\r\n\\s+[^\r\n]+)*", std::regex_constants::icase);
+    std::regex header_regex("(^|\r\n|\n)(" + header_name + "):\\s*([^\r\n]+)((\r\n\\s+[^\r\n]+)*)", 
+                          std::regex_constants::icase);
     std::smatch matches;
     
-    if (std::regex_search(header_data, matches, header_regex) && matches.size() > 1) {
-        std::string result = matches[1].str();
+    if (std::regex_search(header_data, matches, header_regex) && matches.size() > 3) {
+        std::string result = matches[3].str();
         
-        for (size_t i = 2; i < matches.size(); i++) {
-            if (matches[i].length() > 0) {
-                result += " " + matches[i].str();
-            }
+        if (matches[4].length() > 0) {
+            std::string continuations = matches[4].str();
+            std::regex fold_regex("\\r?\\n\\s+");
+            result += std::regex_replace(continuations, fold_regex, " ");
         }
         
-        result.erase(0, result.find_first_not_of(" \t"));
-        size_t end = result.find_last_not_of(" \t\r\n");
+        auto start = result.find_first_not_of(" \t");
+        if (start != std::string::npos) {
+            result = result.substr(start);
+        }
+        
+        auto end = result.find_last_not_of(" \t\r\n");
         if (end != std::string::npos) {
-            result.erase(end + 1);
+            result = result.substr(0, end + 1);
         }
         
         return result;
@@ -348,6 +357,7 @@ bool POP3Client::get_mailbox_status(int& message_count, int& mailbox_size) {
     return true;
 }
 
+// Updated function with delay and confidentiality filtering
 std::vector<EmailInfo> POP3Client::list_messages() {
     std::vector<EmailInfo> email_list;
     
@@ -361,13 +371,14 @@ std::vector<EmailInfo> POP3Client::list_messages() {
         return email_list;
     }
     
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    
     std::string response = receive_response();
     if (response.compare(0, 3, "+OK") != 0) {
         std::cerr << ansiColor(31) << "Error: LIST command failed" << ansiReset() << std::endl;
         return email_list;
     }
     
-    // Parse the LIST response to get message sizes
     std::map<int, int> message_sizes;
     std::istringstream iss(response);
     std::string line;
@@ -390,51 +401,118 @@ std::vector<EmailInfo> POP3Client::list_messages() {
         }
     }
     
-    // For each message, get headers using TOP command
+    const std::vector<std::string> confidential_keywords = {
+        "confidential", "verification", "private", "sensitive", "classified", "restricted",
+        "internal only", "not for distribution", "secret", "proprietary", "linkedin", "facebook", "twitter",
+        "confidentiality", "sensitivity", "x-sensitivity", "x-confidentiality", "security-classification",
+        "x-classification", "x-privacy", "x-privacy-level", "x-privacy-classification"
+    };
+    
     for (const auto& msg_pair : message_sizes) {
         int msg_id = msg_pair.first;
         int msg_size = msg_pair.second;
-        
-        if (!send_command("TOP " + std::to_string(msg_id) + " 0")) {
+
+        if (!send_command("TOP " + std::to_string(msg_id) + " 20")) {
             std::cerr << ansiColor(31) << "Error: Failed to send TOP command for message " << msg_id << ansiReset() << std::endl;
             continue;
         }
         
-        std::string headers = receive_response();
-        if (headers.compare(0, 3, "+OK") != 0) {
-            std::cerr << ansiColor(31) << "Error: TOP command failed for message " << msg_id << ansiReset() << std::endl;
-            continue;
-        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
         
+        std::string headers = receive_response();
+        if (headers.find("Content-Type") == std::string::npos) {
+            if (!send_command("RETR " + std::to_string(msg_id))) {
+                std::cerr << ansiColor(31) << "Error: Failed to send RETR command for message " << msg_id << ansiReset() << std::endl;
+                continue;
+            }
+            
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            
+            headers = receive_response();
+            if (headers.find("Content-Type") == std::string::npos) {
+                std::cerr << ansiColor(31) << "Error: RETR command failed for message " << msg_id << ansiReset() << std::endl;
+                continue;
+            }
+            
+            size_t header_end = headers.find("\r\n\r\n");
+            if (header_end != std::string::npos) {
+                headers = headers.substr(0, header_end);
+            }
+        }
+
         EmailInfo email;
         email.id = msg_id;
         email.size_bytes = msg_size;
         
         email.from = extract_message_header(headers, "From");
-        email.subject = extract_message_header(headers, "Subject");
-        email.date = extract_message_header(headers, "Date");
-        
         if (email.from.empty()) {
             email.from = extract_message_header(headers, "Sender");
             if (email.from.empty()) {
                 email.from = extract_message_header(headers, "Return-Path");
                 if (email.from.empty()) {
-                    email.from = "(Unknown Sender)";
+                    email.from = "(Confidential Sender)";
                 }
             }
         }
         
+        email.subject = extract_message_header(headers, "Subject");
         if (email.subject.empty()) {
-            email.subject = "(No Subject)";
+            email.subject = "(Confidential Subject)";
         }
         
-        email.marked_for_deletion = false;
+        email.date = extract_message_header(headers, "Date");
+        if (email.date.empty()) {
+            email.date = extract_message_header(headers, "Delivery-Date");
+            if (email.date.empty()) {
+                email.date = extract_message_header(headers, "Received");
+                if (!email.date.empty()) {
+                    size_t date_pos = email.date.find(";");
+                    if (date_pos != std::string::npos && date_pos + 1 < email.date.length()) {
+                        email.date = email.date.substr(date_pos + 1);
+                        auto start = email.date.find_first_not_of(" \t");
+                        if (start != std::string::npos) {
+                            email.date = email.date.substr(start);
+                        }
+                    }
+                }
+            }
+        }
         
+        bool is_confidential = false;
+        std::string lowercase_subject = email.subject;
+        std::string lowercase_headers = headers;
+        
+        std::transform(lowercase_subject.begin(), lowercase_subject.end(), 
+                      lowercase_subject.begin(), ::tolower);
+        std::transform(lowercase_headers.begin(), lowercase_headers.end(), 
+                      lowercase_headers.begin(), ::tolower);
+        
+        for (const auto& keyword : confidential_keywords) {
+            if (lowercase_subject.find(keyword) != std::string::npos ||
+                lowercase_headers.find("sensitivity: " + keyword) != std::string::npos ||
+                lowercase_headers.find("x-sensitivity: " + keyword) != std::string::npos ||
+                lowercase_headers.find("x-confidentiality: " + keyword) != std::string::npos) {
+                is_confidential = true;
+                break;
+            }
+        }
+        
+        if (lowercase_headers.find("x-classification") != std::string::npos ||
+            lowercase_headers.find("security-classification") != std::string::npos) {
+            is_confidential = true;
+        }
+        
+        email.is_confidential = is_confidential;
+        
+        email.marked_for_deletion = false;
         email_list.push_back(email);
     }
     
+    std::cout << ansiColor(33) << "Note: Confidential emails are flagged for secure handling" << ansiReset() << std::endl;
+    
     return email_list;
 }
+
 bool POP3Client::delete_message(int message_id) {
     if (!send_command("DELE " + std::to_string(message_id))) {
         std::cerr << ansiColor(31) << "Error: Failed to send DELE command" << ansiReset() << std::endl;
