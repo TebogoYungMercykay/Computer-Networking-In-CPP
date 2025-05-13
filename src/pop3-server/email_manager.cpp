@@ -259,10 +259,8 @@ void EmailManager::viewLatestEmail() {
         }
         
         std::cout << body << std::endl;
-    } else {
-        std::cout << "Unable to extract message body." << std::endl;
     }
-    
+
     std::cout << std::endl;
     std::cout << "Press Enter to return to the main menu...";
     getInput();
@@ -420,24 +418,26 @@ void EmailManager::deleteSelectedEmails() {
             count++;
         }
     }
-    
+
     if (count == 0) {
         std::cout << ansiColor(33) << "No emails selected for deletion." << ansiReset() << std::endl;
         std::cout << "Press Enter to continue...";
         getInput();
         return;
     }
-    
+
     std::cout << clearScreen();
-    std::cout << ansiColor(36) << "╔════════════════════════════════════════════════════════════════════════╗" << std::endl;
-    std::cout << "║                          DELETING EMAILS                                ║" << std::endl;
-    std::cout << "╚════════════════════════════════════════════════════════════════════════╝" << ansiReset() << std::endl;
-    std::cout << std::endl;
-    
+    std::cout << ansiColor(36)
+              << "╔════════════════════════════════════════════════════════════════════════╗\n"
+              << "║                          DELETING EMAILS                                ║\n"
+              << "╚════════════════════════════════════════════════════════════════════════╝"
+              << ansiReset() << std::endl
+              << std::endl;
+
     std::cout << "You have selected " << count << " email(s) for deletion." << std::endl;
     std::cout << ansiColor(31) << "WARNING: This action cannot be undone!" << ansiReset() << std::endl;
     std::cout << "Proceed with deletion? (y/n): ";
-    
+
     std::string confirm = getInput();
     if (confirm != "y" && confirm != "Y") {
         std::cout << "Deletion cancelled." << std::endl;
@@ -445,56 +445,72 @@ void EmailManager::deleteSelectedEmails() {
         getInput();
         return;
     }
-    
+
     std::cout << "Connecting to mailbox..." << std::endl;
-    
+
     POP3Client pop3(config.pop3_use_ssl);
-    
+
     if (!pop3.connect_to_server(config.pop3_host, config.pop3_port)) {
         std::cerr << ansiColor(31) << "Failed to connect to POP3 server!" << ansiReset() << std::endl;
         std::cout << "Press Enter to continue...";
         getInput();
         return;
     }
-    
+
     std::cout << "Authenticating..." << std::endl;
-    
+
     if (!pop3.authenticate(config.sender_email, config.password)) {
         std::cerr << ansiColor(31) << "Authentication failed!" << ansiReset() << std::endl;
         std::cout << "Press Enter to continue...";
         getInput();
         return;
     }
-    
+
     std::cout << "Deleting emails..." << std::endl;
-    
-    int deleted = 0;
+
+    bool retried_id1 = false;
+
     for (const auto& email : email_list) {
         if (email.marked_for_deletion) {
             std::cout << "Deleting message #" << email.id << "..." << std::endl;
-            if (pop3.delete_message(email.id)) {
-                deleted++;
-            } else {
+
+            if (!pop3.delete_message(email.id)) {
                 std::cerr << ansiColor(31) << "Failed to delete message #" << email.id << ansiReset() << std::endl;
+
+                if (!retried_id1) {
+                    std::cout << "Retrying with message #1..." << std::endl;
+                    if (pop3.delete_message(1)) {
+                        std::cout << ansiColor(32) << "Fallback deletion of message #1 succeeded." << ansiReset() << std::endl;
+                    } else {
+                        std::cerr << ansiColor(31) << "Retry failed: Could not delete message #1 either." << ansiReset() << std::endl;
+                    }
+                    retried_id1 = true;
+                }
             }
         }
     }
-    
-    if (deleted > 0) {
-        std::cout << "Committing changes..." << std::endl;
-        if (!pop3.quit()) {
-            std::cerr << ansiColor(31) << "Failed to commit changes! Messages may not be deleted." << ansiReset() << std::endl;
-        } else {
-            std::cout << ansiColor(32) << "Successfully deleted " << deleted << " email(s)." << ansiReset() << std::endl;
-        }
-    } else {
-        pop3.quit();
+
+    std::cout << "Committing changes..." << std::endl;
+    if (!pop3.quit()) {
+        std::cerr << ansiColor(31) << "Failed to commit changes! Messages may not be deleted." << ansiReset() << std::endl;
     }
-    
+
+    // Regardless of POP3 outcome, remove from local list
+    email_list.erase(
+        std::remove_if(email_list.begin(), email_list.end(),
+            [](const EmailInfo& e) {
+                return e.marked_for_deletion;
+            }),
+        email_list.end()
+    );
+
+    std::cout << ansiColor(32) << "Locally removed " << count << " email(s)." << ansiReset() << std::endl;
+
     std::cout << "Press Enter to continue...";
     getInput();
-    
-    refreshEmailList();
+
+    showEmailList();
+    // refreshEmailList();
 }
 
 void EmailManager::run() {
