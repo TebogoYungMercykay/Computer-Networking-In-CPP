@@ -30,45 +30,6 @@ std::filesystem::file_time_type FileMonitor::getFileModificationTime(const std::
     }
 }
 
-void FileMonitor::createDirectoryStructure(FtpClient& client, const std::string& remotePath) {
-    // Remote file path
-    size_t lastSlash = remotePath.find_last_of('/');
-    if (lastSlash == std::string::npos) {
-        return;
-    }
-    
-    std::string dirPath = remotePath.substr(0, lastSlash);
-    if (dirPath.empty()) {
-        return;
-    }
-    
-    std::string currentPath = "";
-    size_t pos = 0;
-    
-    if (dirPath[0] == '/') {
-        pos = 1;
-    }
-    
-    while ((pos = dirPath.find('/', pos)) != std::string::npos) {
-        std::string subDir = dirPath.substr(0, pos);
-        if (!subDir.empty()) {
-            try {
-                client.sendCommand("MKD " + subDir);
-            } catch (const std::exception& e) {
-                // Ignore if directory already exists errors
-            }
-            currentPath = subDir;
-        }
-        pos++;
-    }
-    
-    try {
-        client.sendCommand("MKD " + dirPath);
-    } catch (const std::exception& e) {
-        // Ignore if directory already exists errors
-    }
-}
-
 bool FileMonitor::uploadFile() {
     try {
         // Upload file
@@ -76,7 +37,6 @@ bool FileMonitor::uploadFile() {
                         config.ftp_user, config.ftp_password);
         
         client.connect();
-        createDirectoryStructure(client, config.remote_file);
         
         try {
             size_t remoteSize = client.getFileSize(config.remote_file);
@@ -91,6 +51,11 @@ bool FileMonitor::uploadFile() {
             }
         } catch (const std::exception& e) {
             client.uploadFile(config.local_file, config.remote_file);
+        }
+        
+        // Call the handler function after successful upload
+        if (handler) {
+            handler();
         }
         
         client.disconnect();
