@@ -15,7 +15,6 @@ class FileMonitor {
 
         std::filesystem::file_time_type getFileModificationTime(const std::string& filepath);
         bool uploadFile();
-        void createDirectoryStructure(FtpClient& client, const std::string& remotePath);
         void monitorWithPolling();
 
     public:
