@@ -1,16 +1,40 @@
-# .env File
-# 	HOST=
-# 	PORT=
-# 	SENDER_EMAIL=
-# 	EMAIL_PASSWORD=
-# 	RECEIVER_EMAIL=
-# 	USE_SSL=
+# docker-compose.yml
+#	version: '3.8'
+#
+#	services:
+#	ftp:
+#		image: delfer/alpine-ftp-server
+#		ports:
+#		- "21:21"
+#		- "21000-21010:21000-21010"
+#		environment:
+#		USERS: "${FTP_USER}|${FTP_PASSWORD}"
+#		ADDRESS: "${FTP_ADDRESS:-localhost}"
+#		volumes:
+#		- ./www:/ftp/www
+#	
+#	web:
+#		image: httpd:alpine
+#		ports:
+#		- "8080:8080"
+#		volumes:
+#		- ./www:/usr/local/apache2/htdocs/
+# # Settings for FTP file monitor
+#	FTP_SERVER=localhost
+#	FTP_PORT=21
+#	FTP_USER=username
+#	FTP_PASSWORD=password
+#	LOCAL_FILE=/home/user/index.html
+#	REMOTE_FILE=www/index.html
+#	CHECK_INTERVAL=10
 
 main:
-	g++ -g *.cpp -std=c++17 -pedantic -Wall -Wextra -I/usr/include/openssl -L/usr/lib -lssl -lcrypto -o main
+	g++ -g *.cpp -std=c++17 -pedantic -Wall -Wextra -pthread -lstdc++fs -o main
 
 clean:
-	rm -f *.o *.gcov *.gcda *.gcno *.gz *.html main *.css output.txt coverage.txt
+	rm -f *.o *.gcov *.gcda *.gcno *.gz *.css output.txt coverage.txt
+	rm -f main
+	find . -type f -name "*.html" ! -name "index.html" -delete
 	reset
 	clear
 
@@ -28,3 +52,9 @@ cov:
 	g++ -f profile-arcs -f test-coverage -O0 -g -Wall -Wextra -o main main.cpp
 	./test
 	gcov test-main.cpp -b -o .
+
+# # Create the www directory if it doesn't exist
+# mkdir -p www
+
+# # Start the services
+# docker-compose up -d
