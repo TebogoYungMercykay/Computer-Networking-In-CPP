@@ -18,3 +18,4 @@ services:
       - "8080:80"
     volumes:
       - ./www:/usr/local/apache2/htdocs/
+    user: "root"
