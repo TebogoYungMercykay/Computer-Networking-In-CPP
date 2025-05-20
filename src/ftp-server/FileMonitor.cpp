@@ -4,13 +4,16 @@
 #include <chrono>
 #include <thread>
 #include <stdexcept>
+#include <sys/inotify.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <limits.h>
 
 std::filesystem::file_time_type FileMonitor::getFileModificationTime(const std::string& filepath) {
     return std::filesystem::last_write_time(filepath);
 }
 
 FileMonitor::FileMonitor(const Config& config) : config(config) {
-    // Get initial modification time
     try {
         lastModified = getFileModificationTime(config.local_file);
     }
@@ -20,52 +23,182 @@ FileMonitor::FileMonitor(const Config& config) : config(config) {
     }
 }
 
+void FileMonitor::createDirectoryStructure(FtpClient& client, const std::string& remotePath) {
+    // Remote file path
+    size_t lastSlash = remotePath.find_last_of('/');
+    if (lastSlash == std::string::npos) {
+        return;
+    }
+    
+    std::string dirPath = remotePath.substr(0, lastSlash);
+    if (dirPath.empty()) {
+        return;
+    }
+    
+    std::string currentPath = "";
+    size_t pos = 0;
+    
+    if (dirPath[0] == '/') {
+        pos = 1;
+    }
+    
+    while ((pos = dirPath.find('/', pos)) != std::string::npos) {
+        std::string subDir = dirPath.substr(0, pos);
+        if (!subDir.empty()) {
+            try {
+                client.sendCommand("MKD " + subDir);
+            } catch (const std::exception& e) {
+                // Ignore if directory already exists errors
+            }
+            currentPath = subDir;
+        }
+        pos++;
+    }
+    
+    try {
+        client.sendCommand("MKD " + dirPath);
+    } catch (const std::exception& e) {
+        // Ignore if directory already exists errors
+    }
+}
+
+bool FileMonitor::uploadFile() {
+    try {
+        // Upload file
+        FtpClient client(config.ftp_server, config.ftp_port, 
+                        config.ftp_user, config.ftp_password);
+        
+        client.connect();
+        createDirectoryStructure(client, config.remote_file);
+        
+        try {
+            size_t remoteSize = client.getFileSize(config.remote_file);
+            size_t localSize = std::filesystem::file_size(config.local_file);
+            
+            if (remoteSize > 0 && remoteSize < localSize) {
+                std::cout << ansiColor(97) << "Attempting to resume upload from position: " 
+                          << remoteSize << ansiReset() << std::endl;
+                client.resumeUpload(config.local_file, config.remote_file, remoteSize);
+            } else {
+                client.uploadFile(config.local_file, config.remote_file);
+            }
+        } catch (const std::exception& e) {
+            client.uploadFile(config.local_file, config.remote_file);
+        }
+        
+        client.disconnect();
+        return true;
+    } catch (const std::exception& e) {
+        std::cout << ansiColor(91) << "Error during file upload: " << e.what() 
+                  << ansiReset() << std::endl;
+        return false;
+    }
+}
+
 void FileMonitor::monitor() {
     std::cout << ansiColor(97) << "Monitoring file: " << config.local_file << ansiReset() << std::endl;
     std::cout << ansiColor(97) << "Upload destination: " << config.remote_file << ansiReset() << std::endl;
-    std::cout << ansiColor(97) << "Check interval: " << config.check_interval << " seconds" << ansiReset() << std::endl;
+    
+    int inotifyFd = inotify_init();
+
+    if (inotifyFd == -1) {
+        std::cerr << "Error initializing inotify" << std::endl;
+        std::cout << ansiColor(97) << "Falling back to polling with check interval: " 
+                  << config.check_interval << " seconds" << ansiReset() << std::endl;
+        monitorWithPolling();
+        return;
+    }
+    
+    int wd = inotify_add_watch(inotifyFd, config.local_file.c_str(), 
+                               IN_MODIFY | IN_CLOSE_WRITE | IN_MOVED_TO);
+    
+    if (wd == -1) {
+        std::cerr << "Error adding watch for " << config.local_file << std::endl;
+        close(inotifyFd);
+        std::cout << ansiColor(97) << "Falling back to polling with check interval: " 
+                  << config.check_interval << " seconds" << ansiReset() << std::endl;
+        monitorWithPolling();
+        return;
+    }
+    
+    std::cout << ansiColor(97) << "Using real-time file monitoring (inotify)" << ansiReset() << std::endl;
+    
+    int flags = fcntl(inotifyFd, F_GETFL, 0);
+    fcntl(inotifyFd, F_SETFL, flags | O_NONBLOCK);
+    char buffer[4096] __attribute__((aligned(__alignof__(struct inotify_event))));
     
     while (true) {
         try {
-            // Sleep for the check interval
-            std::this_thread::sleep_for(std::chrono::seconds(config.check_interval));
+            // Poll inotify events
+            int length = read(inotifyFd, buffer, sizeof(buffer));
             
-            // Check if file has been modified
+            if (length > 0) {
+                const struct inotify_event *event;
+                for (char *ptr = buffer; ptr < buffer + length; 
+                     ptr += sizeof(struct inotify_event) + event->len) {
+                    
+                    event = reinterpret_cast<const struct inotify_event *>(ptr);
+                    
+                    if (event->mask & (IN_MODIFY | IN_CLOSE_WRITE | IN_MOVED_TO)) {
+                        std::cout << ansiColor(97) << "File changed, uploading..." << ansiReset() << std::endl;
+                        
+                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                        
+                        uploadFile();
+                        lastModified = getFileModificationTime(config.local_file);
+                    }
+                }
+            }
+            
+            if (config.check_interval > 0) {
+                static auto lastCheck = std::chrono::steady_clock::now();
+                auto now = std::chrono::steady_clock::now();
+                
+                if (now - lastCheck > std::chrono::seconds(config.check_interval)) {
+                    auto currentModTime = getFileModificationTime(config.local_file);
+                    
+                    if (currentModTime > lastModified) {
+                        std::cout << ansiColor(97) << "Periodic check: File changed, uploading..." 
+                                  << ansiReset() << std::endl;
+                        
+                        uploadFile();
+                        lastModified = currentModTime;
+                    }
+                    
+                    lastCheck = now;
+                }
+            }
+            
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        catch (const std::exception& e) {
+            std::cout << ansiColor(91) << "Error during monitoring: " << e.what() 
+                      << ansiReset() << std::endl;
+            std::cout << ansiColor(97) << "Continuing to monitor..." << ansiReset() << std::endl;
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+    }
+    
+    inotify_rm_watch(inotifyFd, wd);
+    close(inotifyFd);
+}
+
+void FileMonitor::monitorWithPolling() {
+    while (true) {
+        try {
+            std::this_thread::sleep_for(std::chrono::seconds(config.check_interval));
             auto currentModTime = getFileModificationTime(config.local_file);
             
             if (currentModTime > lastModified) {
                 std::cout << ansiColor(97) << "File changed, uploading..." << ansiReset() << std::endl;
                 
-                // Upload file
-                FtpClient client(config.ftp_server, config.ftp_port, 
-                                config.ftp_user, config.ftp_password);
-                client.connect();
-                
-                // Advanced feature: Try to resume upload if file exists
-                try {
-                    size_t remoteSize = client.getFileSize(config.remote_file);
-                    size_t localSize = std::filesystem::file_size(config.local_file);
-                    
-                    if (remoteSize > 0 && remoteSize < localSize) {
-                        std::cout << ansiColor(97) << "Attempting to resume upload from position: " << ansiReset() << remoteSize << std::endl;
-                        client.resumeUpload(config.local_file, config.remote_file, remoteSize);
-                    } else {
-                        client.uploadFile(config.local_file, config.remote_file);
-                    }
-                }
-                catch (const std::exception&) {
-                    // If SIZE command fails or any other error, do a normal upload
-                    client.uploadFile(config.local_file, config.remote_file);
-                }
-                
-                client.disconnect();
-                
-                // Update last modified time
+                uploadFile();
                 lastModified = currentModTime;
             }
         }
         catch (const std::exception& e) {
-            std::cout << ansiColor(97) << "Error during monitoring: " << e.what() << ansiReset() << std::endl;
+            std::cout << ansiColor(91) << "Error during monitoring: " << e.what() 
+                      << ansiReset() << std::endl;
             std::cout << ansiColor(97) << "Continuing to monitor..." << ansiReset() << std::endl;
         }
     }
