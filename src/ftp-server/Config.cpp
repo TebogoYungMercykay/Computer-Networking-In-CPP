@@ -37,7 +37,6 @@ Config loadConfig(const std::string& envPath) {
         }
     }
     
-    // Set defaults for missing values
     if (config.ftp_port == 0) config.ftp_port = 21;
     if (config.check_interval == 0) config.check_interval = 60;
     
