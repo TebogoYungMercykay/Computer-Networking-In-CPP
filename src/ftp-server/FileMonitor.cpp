@@ -8,18 +8,25 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <filesystem>
 
-std::filesystem::file_time_type FileMonitor::getFileModificationTime(const std::string& filepath) {
-    return std::filesystem::last_write_time(filepath);
-}
 
-FileMonitor::FileMonitor(const Config& config) : config(config) {
+FileMonitor::FileMonitor(const Config& config, std::function<void()> handler) : config(config), handler(handler) {
     try {
         lastModified = getFileModificationTime(config.local_file);
     }
     catch (const std::exception& e) {
         std::cout << ansiColor(31) << "Error getting initial file time: " << e.what() << ansiReset() << std::endl;
         throw;
+    }
+}
+
+std::filesystem::file_time_type FileMonitor::getFileModificationTime(const std::string& filepath) {
+    try {
+        return std::filesystem::last_write_time(filepath);
+    } catch (const std::filesystem::filesystem_error& e) {
+        std::cerr << "Error getting file modification time: " << e.what() << std::endl;
+        return std::filesystem::file_time_type::min();
     }
 }
 
@@ -140,7 +147,7 @@ void FileMonitor::monitor() {
                     event = reinterpret_cast<const struct inotify_event *>(ptr);
                     
                     if (event->mask & (IN_MODIFY | IN_CLOSE_WRITE | IN_MOVED_TO)) {
-                        std::cout << ansiColor(97) << "File changed, uploading..." << ansiReset() << std::endl;
+                        std::cout << ansiColor(92) << "File changed, uploading..." << ansiReset() << std::endl;
                         
                         std::this_thread::sleep_for(std::chrono::milliseconds(100));
                         
@@ -190,7 +197,7 @@ void FileMonitor::monitorWithPolling() {
             auto currentModTime = getFileModificationTime(config.local_file);
             
             if (currentModTime > lastModified) {
-                std::cout << ansiColor(97) << "File changed, uploading..." << ansiReset() << std::endl;
+                std::cout << ansiColor(92) << "File changed, uploading..." << ansiReset() << std::endl;
                 
                 uploadFile();
                 lastModified = currentModTime;
