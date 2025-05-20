@@ -10,16 +10,20 @@ int main(int argc, char* argv[]) {
         if (argc > 1) {
             envPath = argv[1];
         }
-        
-        Config config = loadConfig(envPath);
-        FileMonitor monitor(config);
 
+        Config config = loadConfig(envPath);
+
+        auto handler = []() {
+            std::cout << ansiColor(92) << "Handler: File was successfully uploaded!" << ansiReset() << std::endl;
+        };
+
+        FileMonitor monitor(config, handler);
         monitor.monitor();
-        
+
         return 0;
     }
     catch (const std::exception& e) {
-        std::cerr << "Fatal error: " << e.what() << std::endl;
+        std::cout << ansiColor(91) << "Fatal error: " << e.what() << ansiReset() << std::endl;
         return 1;
     }
 }
