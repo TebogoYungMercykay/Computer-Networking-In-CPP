@@ -12,13 +12,10 @@ struct Config {
     std::string ftp_password;
     std::string local_file;
     std::string remote_file;
-    int check_interval; // seconds
+    int check_interval;
 };
 
-// Load configuration from .env file
 Config loadConfig(const std::string& envPath);
-
-// Helper function to trim whitespace
 std::string trim(const std::string& str);
 
 #endif // CONFIG_H
