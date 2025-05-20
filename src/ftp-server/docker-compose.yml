@@ -10,7 +10,7 @@ services:
       USERS: "ftpuser|ftpuser12345"
       ADDRESS: "localhost"
     volumes:
-      - ./www:/ftp/www
+      - ./www:/ftp/ftpuser/www
   
   web:
     image: httpd:alpine
