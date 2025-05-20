@@ -80,7 +80,7 @@ void FileMonitor::monitor() {
         monitorWithPolling();
         return;
     }
-    
+
     int wd = inotify_add_watch(inotifyFd, config.local_file.c_str(), 
                                IN_MODIFY | IN_CLOSE_WRITE | IN_MOVED_TO);
     
