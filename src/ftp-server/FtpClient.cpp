@@ -9,10 +9,15 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <cstring>
 
 FtpClient::FtpClient(const std::string& server, int port, 
-                     const std::string& username, const std::string& password)
-    : server(server), port(port), username(username), password(password), controlSocket(-1) {
+                     const std::string& username, const std::string& password) {
+    this->controlSocket = -1;
+    this->server = server;
+    this->port = port;
+    this->username = username;
+    this->password = password;
 }
 
 FtpClient::~FtpClient() {
@@ -33,7 +38,6 @@ std::string FtpClient::readResponse() {
         buffer[received] = '\0';
         response += buffer.data();
         
-        // Check if the response is complete
         if (received < static_cast<int>(buffer.size() - 1) && 
             (response.size() >= 4 && response[3] == ' ')) {
             break;
@@ -41,13 +45,16 @@ std::string FtpClient::readResponse() {
     }
     
     std::cout << ansiColor(90) << "Server: " << response << ansiReset() << std::endl;
+
     return response;
 }
 
 std::string FtpClient::sendCommand(const std::string& command) {
     std::string displayCommand = command;
+
     std::regex passwordRegex(R"((PASS\s+)(.*))", std::regex_constants::icase);
     std::regex userRegex(R"((USER\s+)(.*))", std::regex_constants::icase);
+
     if (std::regex_search(command, passwordRegex)) {
         displayCommand = std::regex_replace(command, passwordRegex, "$1************");
     } else if (std::regex_search(command, userRegex)) {
@@ -56,9 +63,11 @@ std::string FtpClient::sendCommand(const std::string& command) {
 
     std::cout << ansiColor(90) << "Client: " << displayCommand << ansiReset() << std::endl;
     std::string cmd = command + "\r\n";
+
     if (send(controlSocket, cmd.c_str(), cmd.length(), 0) == -1) {
         throw std::runtime_error("Failed to send command");
     }
+
     return readResponse();
 }
 
@@ -86,9 +95,15 @@ int FtpClient::createDataConnection() {
     }
     
     struct sockaddr_in serverAddr;
+    memset(&serverAddr, 0, sizeof(serverAddr));
+
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(port);
-    inet_pton(AF_INET, ip.c_str(), &serverAddr.sin_addr);
+
+    if (inet_pton(AF_INET, ip.c_str(), &serverAddr.sin_addr) <= 0) {
+        close(dataSocket);
+        throw std::runtime_error("Invalid address format");
+    }
     
     if (::connect(dataSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == -1) {
         close(dataSocket);
@@ -99,7 +114,6 @@ int FtpClient::createDataConnection() {
 }
 
 void FtpClient::connect() {
-    // Create control socket
     controlSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (controlSocket == -1) {
         throw std::runtime_error("Failed to create control socket");
@@ -107,35 +121,36 @@ void FtpClient::connect() {
     
     // Connect to server
     struct sockaddr_in serverAddr;
+    memset(&serverAddr, 0, sizeof(serverAddr));
+
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(port);
-    inet_pton(AF_INET, server.c_str(), &serverAddr.sin_addr);
+
+    if (inet_pton(AF_INET, server.c_str(), &serverAddr.sin_addr) <= 0) {
+        close(controlSocket);
+        throw std::runtime_error("Invalid address format");
+    }
     
     if (::connect(controlSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == -1) {
         close(controlSocket);
         throw std::runtime_error("Failed to connect to server");
     }
     
-    // Read welcome message
     readResponse();
     
-    // Login
+    // Authenticate
     sendCommand("USER " + username);
     sendCommand("PASS " + password);
 }
 
 void FtpClient::uploadFile(const std::string& localPath, const std::string& remotePath) {
     try {
-        // Switch to binary mode
         sendCommand("TYPE I");
         
-        // Create data connection
         int dataSocket = createDataConnection();
         
-        // Send STOR command
         sendCommand("STOR " + remotePath);
         
-        // Read local file and send it
         std::ifstream file(localPath, std::ios::binary);
         if (!file.is_open()) {
             close(dataSocket);
@@ -155,15 +170,13 @@ void FtpClient::uploadFile(const std::string& localPath, const std::string& remo
             }
         }
         
-        // Close data connection
+        // Close connection
         close(dataSocket);
-        
-        // Read transfer complete response
+
         readResponse();
         
         std::cout << ansiColor(92) << "File uploaded successfully: " << localPath << " -> " << remotePath << ansiReset() << std::endl;
-    }
-    catch (const std::exception& e) {
+    } catch (const std::exception& e) {
         std::cout << ansiColor(91) << "Error during file upload: " << e.what() << ansiReset() << std::endl;
         throw;
     }
@@ -180,6 +193,7 @@ void FtpClient::disconnect() {
 size_t FtpClient::getFileSize(const std::string& remotePath) {
     std::string response = sendCommand("SIZE " + remotePath);
     std::regex sizeRegex(R"(213 (\d+))");
+
     std::smatch matches;
     
     if (std::regex_search(response, matches, sizeRegex) && matches.size() == 2) {
@@ -191,26 +205,20 @@ size_t FtpClient::getFileSize(const std::string& remotePath) {
 
 void FtpClient::resumeUpload(const std::string& localPath, const std::string& remotePath, size_t offset) {
     try {
-        // Switch to binary mode
         sendCommand("TYPE I");
-        
-        // Set restart point
         sendCommand("REST " + std::to_string(offset));
         
-        // Create data connection
+        // Create Connection
         int dataSocket = createDataConnection();
         
-        // Send STOR command
         sendCommand("STOR " + remotePath);
         
-        // Read local file from offset and send it
         std::ifstream file(localPath, std::ios::binary);
         if (!file.is_open()) {
             close(dataSocket);
             throw std::runtime_error("Failed to open local file");
         }
         
-        // Seek to offset
         file.seekg(offset);
         
         std::vector<char> buffer(8192);
@@ -226,10 +234,9 @@ void FtpClient::resumeUpload(const std::string& localPath, const std::string& re
             }
         }
         
-        // Close data connection
+        // Close Connection
         close(dataSocket);
         
-        // Read transfer complete response
         readResponse();
         
         std::cout << ansiColor(92) << "File resumed upload successfully: " << localPath << " -> " << remotePath << ansiReset() << std::endl;
@@ -241,13 +248,11 @@ void FtpClient::resumeUpload(const std::string& localPath, const std::string& re
 }
 
 std::string FtpClient::listDirectory(const std::string& path) {
-    // Create data connection
+    // Create Connection
     int dataSocket = createDataConnection();
     
-    // Send LIST command
     sendCommand("LIST " + path);
     
-    // Read directory listing
     std::vector<char> buffer(4096);
     std::string listing;
     
@@ -259,10 +264,9 @@ std::string FtpClient::listDirectory(const std::string& path) {
         listing += buffer.data();
     }
     
-    // Close data connection
+    // Close Connection
     close(dataSocket);
     
-    // Read transfer complete response
     readResponse();
     
     return listing;
