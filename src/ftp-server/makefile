@@ -1,24 +1,25 @@
 # docker-compose.yml
-#	version: '3.8'
-#
-#	services:
-#	ftp:
-#		image: delfer/alpine-ftp-server
-#		ports:
-#		- "21:21"
-#		- "21000-21010:21000-21010"
-#		environment:
-#		USERS: "${FTP_USER}|${FTP_PASSWORD}"
-#		ADDRESS: "${FTP_ADDRESS:-localhost}"
-#		volumes:
-#		- ./www:/ftp/www
-#	
-#	web:
-#		image: httpd:alpine
-#		ports:
-#		- "8080:8080"
-#		volumes:
-#		- ./www:/usr/local/apache2/htdocs/
+# version: '3.8'
+
+# services:
+#   ftp:
+#     image: delfer/alpine-ftp-server
+#     ports:
+#       - "21:21"
+#       - "21000-21010:21000-21010"
+#     environment:
+#       USERS: "****|*********"
+#       ADDRESS: "localhost"
+#     volumes:
+#       - ./www:/ftp/www
+  
+#   web:
+#     image: httpd:alpine
+#     ports:
+#       - "8080:80"
+#     volumes:
+#       - ./www:/usr/local/apache2/htdocs/
+
 # # Settings for FTP file monitor
 #	FTP_SERVER=localhost
 #	FTP_PORT=21
@@ -32,7 +33,7 @@ main:
 	g++ -g *.cpp -std=c++17 -pedantic -Wall -Wextra -pthread -lstdc++fs -o main
 
 clean:
-	rm -f *.o *.gcov *.gcda *.gcno *.gz *.css output.txt coverage.txt
+	rm -f *.o *.gcov *.gcda *.gcno *.gz *.css readme.env output.txt coverage.txt
 	rm -f main
 	find . -type f -name "*.html" ! -name "index.html" -delete
 	reset
