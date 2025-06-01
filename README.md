@@ -94,15 +94,4 @@ The Application Layer is the closest layer to the end user and interacts with so
   - [NetworkProf](https://youtube.com/playlist?list=PLtjT6PTtgrGZCJMMQdti2AQa85P8LQIWy&feature=shared)
   - [Engineering Funda](https://www.youtube.com/watch?v=hOEj_0GFh2g&list=PLgwJf8NK-2e5utf4e5VJCEeNTDFtKHgsF)
 
-## Practicals Specifications
-
-The `Practicals.pdf` file contains detailed specifications for practical exercises related to each OSI model layer. These practicals are designed to provide hands-on experience and deepen understanding of the theoretical concepts.
-
-- **Location**: `Practicals.pdf`
-- **Content**: 
-  - Step-by-step instructions
-  - Practical exercises for each OSI layer
-  - Diagrams and examples
-  - Evaluation criteria
-
 Feel free to explore the notes and practicals to enhance your understanding of the OSI model and its applications in real-world networking scenarios. For any questions or further clarifications, please refer to the contact section in the main repository README file.
