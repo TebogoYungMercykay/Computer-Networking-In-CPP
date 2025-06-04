@@ -13,6 +13,19 @@
 #include <openssl/err.h>
 #include <ctime>
 
+
+// Create A Functio to Generate a Random String
+std::string generateRandomString(size_t length) {
+    const std::string characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    std::string random_string;
+    
+    for (size_t i = 0; i < length; ++i) {
+        random_string += characters[rand() % characters.size()];
+    }
+    
+    return random_string;
+}
+
 // ---- Private methods ----
 
 bool SMTPClient::send_data(const std::string& data) {
@@ -271,16 +284,16 @@ bool SMTPClient::send_email(const std::string& from, const std::string& to,
     time_t now = time(0);
     char date_buf[100];
     strftime(date_buf, sizeof(date_buf), "%a, %d %b %Y %H:%M:%S %z", localtime(&now));
-    
+    std::string randomString = generateRandomString(6);
     std::string email_content = 
         "From: \"Home Security System\" <" + from + ">\r\n"
         "To: <" + to + ">\r\n"
-        "Subject: " + subject + "\r\n"
+        "Subject: " + randomString + " " + subject + "\r\n"
         "Date: " + std::string(date_buf) + "\r\n"
         "MIME-Version: 1.0\r\n"
         "Content-Type: text/plain; charset=utf-8\r\n"
         "\r\n" +
-        body + "\r\n.\r\n";
+        body + randomString + "\r\n.\r\n";
     
     send_data(email_content);
     if (!check_response(250)) {
