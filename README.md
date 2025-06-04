@@ -1,97 +1,110 @@
-# Computer Networking In Java
+# Computer Networking: Network Protocols Implementation
 
-Welcome to the Project Repository! This repository contains a collection of projects focusing on different server and client implementations, including CGI scripts, FTP, LDAP, POP3, SMTP servers, and more. Below is an overview of each project contained in this repository.
+<img src="images/readme.jpg" style="width: 100%; height: 40%;" />
 
-## Notes on OSI Model Layers
+A comprehensive collection of network protocol implementations and server applications built from scratch to demonstrate core networking concepts and server-side programming.
 
-### 1 - Physical Layer
+## Overview
 
-The Physical Layer is the first layer of the OSI model and is responsible for the physical connection between devices. It deals with the transmission and reception of raw bit streams over a physical medium such as cables, fiber optics, or wireless.
+This repository contains implementations of various network protocols and server applications, each built to understand the fundamental mechanics of network communication without relying on high-level libraries or frameworks.
 
-- **Functions**: 
-  - Bit-by-bit delivery
-  - Modulation and demodulation
-  - Signal transmission and reception
-- **Components**: 
-  - Network cables
-  - Hubs
-  - Repeaters
+## Components
 
-### 2 - Data Link Layer
+**cgi-scripts/** - Common Gateway Interface programs for server-side execution and dynamic web content generation
 
-The Data Link Layer is responsible for node-to-node data transfer and error detection and correction. It ensures that data transferred between two nodes is error-free and properly synchronized.
+- Time zone display applications
+- Dynamic content generation
+- Backend file manipulation
 
-- **Functions**: 
-  - Frame synchronization
-  - Error detection and correction
-  - Flow control
-- **Components**: 
-  - Switches
-  - Bridges
-  - Network Interface Cards (NICs)
+**ftp-server/** - File Transfer Protocol server implementation
 
-### 3 - Network Layer
+- Control and data connection handling
+- File upload/download capabilities
+- Multi-client support
 
-The Network Layer is responsible for data routing, packet forwarding, and logical addressing. It determines the best path for data to travel from the source to the destination.
+**http-server/** - HTTP server supporting static file serving, dynamic content generation, and form processing
 
-- **Functions**: 
-  - Logical addressing (IP addresses)
-  - Routing
-  - Packet forwarding
-- **Components**: 
-  - Routers
-  - Layer 3 switches
+- Custom routing mechanisms
+- Calculator web application interface
 
-### 4 - Transport Layer
+**ldap-389/** - Lightweight Directory Access Protocol client implementation
 
-The Transport Layer ensures reliable data transfer between end systems. It provides services such as connection establishment, flow control, error recovery, and data segmentation.
+- Directory Information Tree queries
+- Binary message encoding/decoding
+- Authentication and search operations
 
-- **Functions**: 
-  - Segmentation and reassembly
-  - Connection control
-  - Flow control
-- **Protocols**: 
-  - TCP (Transmission Control Protocol)
-  - UDP (User Datagram Protocol)
+**pop3-server/** - Post Office Protocol 3 server for email retrieval
 
-### 5 - Session Layer
+- Email message management
+- User authentication
+- Message deletion and retrieval
 
-The Session Layer manages and controls the connections between applications. It establishes, maintains, and terminates sessions between two communicating hosts.
+**smtp-server/** - Simple Mail Transfer Protocol server implementation
 
-- **Functions**: 
-  - Session establishment, maintenance, and termination
-  - Dialog control
-  - Synchronization
-- **Examples**: 
-  - Remote procedure calls (RPCs)
-  - Session management protocols
+- Email sending capabilities
+- SMTP command processing
+- Message queuing and delivery
 
-### 6 - Presentation Layer
+**telnet/** - Telnet server implementation
 
-The Presentation Layer translates data between the application layer and the network format. It ensures that data is in a readable format for the application layer and can involve data encryption and compression.
+- Remote terminal access
+- ANSI escape sequence support
+- Multi-user capabilities
 
-- **Functions**: 
-  - Data translation
-  - Data encryption and decryption
-  - Data compression and decompression
-- **Examples**: 
-  - Encryption protocols (SSL/TLS)
-  - Character encoding (ASCII, EBCDIC)
+## Technical Implementation
 
-### 7 - Application Layer
+### Core Principles
 
-The Application Layer is the closest layer to the end user and interacts with software applications. It provides services for network applications such as email, file transfer, and web browsing.
+- Socket-level programming using raw sockets
+- Protocol compliance with RFC specifications
+- No high-level networking libraries
+- Server-side focus with multi-threaded architectures
 
-- **Functions**: 
-  - Network process to application
-  - Resource sharing
-  - Remote file access
-- **Protocols**: 
-  - HTTP/HTTPS
-  - FTP
-  - SMTP
-- **YouTube Playlist**:
-  - [NetworkProf](https://youtube.com/playlist?list=PLtjT6PTtgrGZCJMMQdti2AQa85P8LQIWy&feature=shared)
-  - [Engineering Funda](https://www.youtube.com/watch?v=hOEj_0GFh2g&list=PLgwJf8NK-2e5utf4e5VJCEeNTDFtKHgsF)
+### Features
+
+- Binary and text protocol handling
+- Custom message parsing and generation
+- Cross-platform compatibility
+- Comprehensive error handling
+
+## Prerequisites
+
+- Linux/Unix environment
+- GCC compiler
+- Apache web server (for CGI components)
+- OpenLDAP server (for LDAP components)
+
+## Installation
+
+1. Clone the repository
+2. Navigate to individual project directories
+3. Compile using provided Makefiles
+4. Configure server settings as needed
+5. Deploy to appropriate server directories
+
+Each component includes specific configuration files and setup instructions.
+
+## Protocol Coverage
+
+- HTTP/1.1 with CGI support
+- FTP with active/passive modes
+- SMTP for email transmission
+- POP3 for email retrieval
+- LDAP for directory services
+- Telnet for remote terminal access
+
+## Security Notice
+
+These implementations are designed for educational purposes and protocol understanding. They may not include production-level security features.
+
+## Credits
+
+- [NetworkProf](https://youtube.com/playlist?list=PLtjT6PTtgrGZCJMMQdti2AQa85P8LQIWy&feature=shared)
+- [Engineering Funda](https://www.youtube.com/watch?v=hOEj_0GFh2g&list=PLgwJf8NK-2e5utf4e5VJCEeNTDFtKHgsF)
+- [Feduguide](https://www.google.com/url?sa=i&url=https%3A%2F%2Feduguide.co.in%2Fwhat-are-the-4-main-types-of-computer-networks%2F&psig=AOvVaw2OKIWpp_98g_WIgo4xgEGZ&ust=1749083861589000&source=images&cd=vfe&opi=89978449&ved=0CBcQjhxqFwoTCNDdlPzD1o0DFQAAAAAdAAAAABAE)
 
 Feel free to explore the notes and practicals to enhance your understanding of the OSI model and its applications in real-world networking scenarios. For any questions or further clarifications, please refer to the contact section in the main repository README file.
+
+---
+
+---
