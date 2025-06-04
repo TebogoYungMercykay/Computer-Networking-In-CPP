@@ -101,7 +101,7 @@ These implementations are designed for educational purposes and protocol underst
 
 - [NetworkProf](https://youtube.com/playlist?list=PLtjT6PTtgrGZCJMMQdti2AQa85P8LQIWy&feature=shared)
 - [Engineering Funda](https://www.youtube.com/watch?v=hOEj_0GFh2g&list=PLgwJf8NK-2e5utf4e5VJCEeNTDFtKHgsF)
-- [Feduguide](https://www.google.com/url?sa=i&url=https%3A%2F%2Feduguide.co.in%2Fwhat-are-the-4-main-types-of-computer-networks%2F&psig=AOvVaw2OKIWpp_98g_WIgo4xgEGZ&ust=1749083861589000&source=images&cd=vfe&opi=89978449&ved=0CBcQjhxqFwoTCNDdlPzD1o0DFQAAAAAdAAAAABAE)
+- [Feduguide](https://eduguide.co.in/what-are-the-4-main-types-of-computer-networks)
 
 Feel free to explore the notes and practicals to enhance your understanding of the OSI model and its applications in real-world networking scenarios. For any questions or further clarifications, please refer to the contact section in the main repository README file.
 
